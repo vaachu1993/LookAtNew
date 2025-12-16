@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
+import '../../widgets/common_bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,8 +9,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
   // Fake data for featured news
   final List<Map<String, dynamic>> featuredNews = [
     {
@@ -60,39 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'readTime': '5 min read',
     },
   ];
-
-  void _onItemTapped(int index) async {
-    // Navigate to profile screen when Account tab is tapped
-    if (index == 4) {
-      // Check if user is logged in before navigating to profile
-      final authService = AuthService();
-      final isLoggedIn = await authService.isLoggedIn();
-
-      if (!isLoggedIn) {
-        // Not logged in, redirect to login
-        if (!mounted) return;
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Vui lòng đăng nhập để xem thông tin tài khoản'),
-            backgroundColor: Colors.orange.shade900,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
-        return;
-      }
-
-      // User is logged in, navigate to profile
-      if (!mounted) return;
-      Navigator.of(context).pushNamed('/profile');
-      return;
-    }
-
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -492,50 +457,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFFE20035),
-        unselectedItemColor: const Color(0xFF8E8E93),
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Explore',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark_border),
-            label: 'Bookmark',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            label: 'Notifications',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Account',
-          ),
-        ],
-      ),
+    return CommonBottomNavBar(
+      currentIndex: 0, // Home tab active
     );
   }
 }

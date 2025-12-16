@@ -5,7 +5,7 @@ import 'screens/auth/email_sign_in_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/profile/profile_screen.dart';
-import 'services/deep_link_service.dart';
+import 'screens/explore/explore_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,14 +17,6 @@ void main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-
-  // Initialize deep link service for email verification
-  try {
-    await DeepLinkService().init();
-    print('✅ [Main] Deep link service initialized');
-  } catch (e) {
-    print('❌ [Main] Failed to initialize deep link service: $e');
-  }
 
   runApp(const MyApp());
 }
@@ -50,6 +42,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const EmailSignInScreen(),
         '/home': (context) => const HomeScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/explore': (context) => const ExploreScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/verify-email') {

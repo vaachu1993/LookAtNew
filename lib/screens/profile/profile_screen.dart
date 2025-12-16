@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import '../../core/api_client.dart';
 import '../../core/image_picker_helper.dart';
 import '../../models/user.dart';
+import '../../widgets/common_bottom_nav_bar.dart';
 import 'edit_name_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -612,56 +613,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildBottomNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: 4, // Account tab
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFFE20035),
-        unselectedItemColor: const Color(0xFF8E8E93),
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.of(context).pop(); // Go back to home
-          }
-          // Add other navigation handlers as needed
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Explore',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark_border),
-            label: 'Bookmark',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            label: 'Notifications',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            activeIcon: Icon(Icons.person),
-            label: 'Account',
-          ),
-        ],
-      ),
+    return CommonBottomNavBar(
+      currentIndex: 4, // Account tab active
     );
   }
 
