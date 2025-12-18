@@ -5,11 +5,7 @@ class CommonBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int)? onTap;
 
-  const CommonBottomNavBar({
-    super.key,
-    required this.currentIndex,
-    this.onTap,
-  });
+  const CommonBottomNavBar({super.key, required this.currentIndex, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +76,9 @@ class CommonBottomNavBar extends StatelessWidget {
 
     switch (index) {
       case 0: // Home
-        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/home', (route) => false);
         break;
 
       case 1: // Explore
@@ -88,27 +86,11 @@ class CommonBottomNavBar extends StatelessWidget {
         break;
 
       case 2: // Bookmark
-        // TODO: Implement bookmark screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Bookmark feature coming soon'),
-            backgroundColor: Colors.orange.shade900,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
+        Navigator.of(context).pushNamed('/bookmark');
         break;
 
       case 3: // Notifications
-        // TODO: Implement notifications screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Notifications feature coming soon'),
-            backgroundColor: Colors.orange.shade900,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
+        Navigator.of(context).pushNamed('/notifications');
         break;
 
       case 4: // Account
@@ -120,13 +102,19 @@ class CommonBottomNavBar extends StatelessWidget {
 
         if (!isLoggedIn) {
           // Not logged in, redirect to login
-          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/login', (route) => false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Vui lòng đăng nhập để xem thông tin tài khoản'),
+              content: const Text(
+                'Vui lòng đăng nhập để xem thông tin tài khoản',
+              ),
               backgroundColor: Colors.orange.shade900,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
           return;
@@ -138,4 +126,3 @@ class CommonBottomNavBar extends StatelessWidget {
     }
   }
 }
-

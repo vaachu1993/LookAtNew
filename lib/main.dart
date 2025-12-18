@@ -6,6 +6,8 @@ import 'screens/auth/verify_email_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/explore/explore_screen.dart';
+import 'screens/bookmark/bookmark_screen.dart';
+import 'screens/notifications/notifications_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +45,8 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/explore': (context) => const ExploreScreen(),
+        '/bookmark': (context) => const BookmarkScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/verify-email') {
@@ -58,4 +62,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
