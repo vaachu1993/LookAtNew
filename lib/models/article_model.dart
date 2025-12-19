@@ -123,5 +123,31 @@ class ArticleModel {
     final minutes = (wordCount / 200).ceil();
     return '$minutes min read';
   }
-}
 
+  // Check if article has valid thumbnail
+  bool get hasThumbnail {
+    return thumbnail.isNotEmpty &&
+           thumbnail != 'null' &&
+           Uri.tryParse(thumbnail)?.hasAbsolutePath == true;
+  }
+
+  // Get placeholder color based on category
+  int get placeholderColor {
+    switch (category.toLowerCase()) {
+      case 'technology':
+        return 0xFF2196F3; // Blue
+      case 'business':
+        return 0xFF4CAF50; // Green
+      case 'sports':
+        return 0xFFFF9800; // Orange
+      case 'entertainment':
+        return 0xFF9C27B0; // Purple
+      case 'health':
+        return 0xFFF44336; // Red
+      case 'science':
+        return 0xFF00BCD4; // Cyan
+      default:
+        return 0xFF607D8B; // Blue Grey
+    }
+  }
+}

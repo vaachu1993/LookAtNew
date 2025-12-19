@@ -114,8 +114,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       print('✅ [SignUp] Sign-up successful, navigating to HomeScreen...');
 
-      // Đăng ký thành công, chuyển sang HomeScreen
-      Navigator.of(context).pushReplacementNamed('/home');
+      // Đăng ký thành công, chuyển sang HomeScreen và trigger fetch RSS
+      Navigator.of(context).pushReplacementNamed(
+        '/home',
+        arguments: {'shouldFetchRss': true}, // Trigger RSS fetch
+      );
 
       _showSuccess('Đăng ký Google thành công! Xin chào ${response.user.username}');
     } catch (e) {

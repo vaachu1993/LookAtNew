@@ -11,32 +11,132 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final FeedService _feedService = FeedService();
   final FavoriteService _favoriteService = FavoriteService();
 
   List<ArticleModel> _articles = [];
   bool _isLoading = true;
+  bool _isLoadingFromCache = false;
   String? _errorMessage;
+  String? _cacheWarning;
 
   // Track favorites by articleId -> favoriteId mapping
   Map<String, String> _favoriteIds = {};
 
+  // Current category (có thể mở rộng cho multi-category)
+  String _currentCategory = 'all';
+
+  // Flag to check if need to fetch RSS after login
+  bool _hasCheckedLoginFlag = false;
+
   @override
   void initState() {
     super.initState();
-    _loadFeed();
+    WidgetsBinding.instance.addObserver(this);
+    _loadFeed(forceRefresh: false); // Cold start - check cache first
   }
 
-  Future<void> _loadFeed() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
 
-    // Load feed and favorites in parallel
-    final feedResponse = await _feedService.getFeed();
+    // Check arguments once after login
+    if (!_hasCheckedLoginFlag) {
+      _hasCheckedLoginFlag = true;
+      _checkLoginFlag();
+    }
+  }
+
+  /// Check nếu user vừa login và cần fetch RSS
+  void _checkLoginFlag() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic> && args['shouldFetchRss'] == true) {
+      // User vừa login → Fetch RSS ngay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _loadFeed(forceRefresh: true); // Fetch RSS + get feed
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Handle app lifecycle changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // App resume từ background
+    if (state == AppLifecycleState.resumed) {
+      _handleAppResume();
+    }
+  }
+
+  /// Xử lý khi app resume từ background
+  Future<void> _handleAppResume() async {
+    // Kiểm tra có cần fetch không dựa trên thời gian
+    final shouldFetch = await _feedService.shouldFetchOnResume(_currentCategory);
+
+    if (shouldFetch) {
+      // >= 10 phút → fetch mới
+      await _loadFeed(forceRefresh: true, silent: true);
+    }
+    // < 5 phút → không làm gì, dùng cache hiện tại
+  }
+
+  /// Load feed với cache logic
+  ///
+  /// [forceRefresh] - true = pull-to-refresh (fetch RSS + get feed), false = check cache
+  /// [silent] - true = không show loading UI (background refresh)
+  Future<void> _loadFeed({
+    bool forceRefresh = false,
+    bool silent = false,
+  }) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        _cacheWarning = null;
+      });
+    }
+
+    // Load feed with RSS fetch logic
+    // forceRefresh = true → Fetch RSS mới từ nguồn rồi get feed
+    // forceRefresh = false → Chỉ get feed (dùng cache nếu có)
+    late dynamic response;
+
+    if (forceRefresh) {
+      // Pull-to-refresh → Fetch RSS mới rồi get feed
+      response = await _feedService.fetchRssAndGetFeed(
+        category: _currentCategory,
+        silent: silent,
+      );
+    } else {
+      // Cold start hoặc background refresh → Chỉ get feed từ database
+      final feedResponse = await _feedService.getFeed(
+        category: _currentCategory,
+        forceRefresh: false,
+      );
+      // Wrap vào response tương tự
+      response = _FeedLoadResult(
+        feedResponse: feedResponse,
+        rssFetchSuccess: false,
+      );
+    }
+
+    // Load favorites in parallel
     final favoritesResponse = await _favoriteService.getFavorites();
+
+    // Extract feedResponse
+    final feedResponse = response is FeedResponseWithRssFetch
+        ? response.feedResponse
+        : (response as _FeedLoadResult).feedResponse;
 
     if (mounted) {
       if (feedResponse.isSuccess) {
@@ -58,11 +158,59 @@ class _HomeScreenState extends State<HomeScreen> {
           _articles = articles;
           _favoriteIds = favoriteMap;
           _isLoading = false;
+          _isLoadingFromCache = feedResponse.fromCache;
+          _cacheWarning = feedResponse.cacheWarning;
         });
+
+        // Show appropriate indicator
+        if (!silent && mounted) {
+          if (response is FeedResponseWithRssFetch && response.rssFetchSuccess) {
+            // RSS fetch thành công - show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.refresh, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${response.articlesCount} new articles fetched',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+                duration: const Duration(seconds: 2),
+                backgroundColor: Colors.green.shade700,
+              ),
+            );
+          } else if (feedResponse.fromCache) {
+            // Dùng cache - show cache indicator
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.offline_bolt, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        feedResponse.cacheWarning ?? 'Showing cached articles',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+                duration: const Duration(seconds: 2),
+                backgroundColor: Colors.orange.shade700,
+              ),
+            );
+          }
+        }
       } else {
         setState(() {
           _errorMessage = feedResponse.error ?? 'Failed to load feed';
           _isLoading = false;
+          _isLoadingFromCache = false;
         });
       }
     }
@@ -393,30 +541,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     width: 230,
                     height: 160,
-                    color: Colors.grey[800],
-                    child: article.thumbnail.isNotEmpty
+                    color: Color(article.placeholderColor).withValues(alpha: 0.3),
+                    child: article.hasThumbnail
                         ? Image.network(
                             article.thumbnail,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[800],
-                                child: const Icon(
-                                  Icons.image,
-                                  color: Colors.grey,
-                                  size: 50,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  strokeWidth: 2,
                                 ),
                               );
                             },
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholder(article);
+                            },
                           )
-                        : Container(
-                            color: Colors.grey[800],
-                            child: const Icon(
-                              Icons.article,
-                              color: Colors.grey,
-                              size: 50,
-                            ),
-                          ),
+                        : _buildPlaceholder(article),
                   ),
                 ),
                 // Bookmark button
@@ -709,29 +856,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   width: 90,
                   height: 90,
-                  color: Colors.grey[300],
-                  child: article.thumbnail.isNotEmpty
+                  color: Color(article.placeholderColor).withValues(alpha: 0.2),
+                  child: article.hasThumbnail
                       ? Image.network(
                           article.thumbnail,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.image,
-                                color: Colors.grey,
-                                size: 30,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  color: Color(article.placeholderColor).withValues(alpha: 0.5),
+                                  strokeWidth: 2,
+                                ),
                               ),
                             );
                           },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              _getCategoryIcon(article.category),
+                              color: Color(article.placeholderColor).withValues(alpha: 0.5),
+                              size: 32,
+                            );
+                          },
                         )
-                      : Container(
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.article,
-                            color: Colors.grey,
-                            size: 30,
-                          ),
+                      : Icon(
+                          _getCategoryIcon(article.category),
+                          color: Color(article.placeholderColor).withValues(alpha: 0.5),
+                          size: 32,
                         ),
                 ),
               ),
@@ -774,5 +932,70 @@ class _HomeScreenState extends State<HomeScreen> {
       currentIndex: 0, // Home tab active
     );
   }
+
+  /// Build placeholder khi không có thumbnail
+  Widget _buildPlaceholder(ArticleModel article) {
+    return Container(
+      color: Color(article.placeholderColor).withValues(alpha: 0.2),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _getCategoryIcon(article.category),
+            color: Color(article.placeholderColor).withValues(alpha: 0.7),
+            size: 48,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              article.category.toUpperCase(),
+              style: TextStyle(
+                color: Color(article.placeholderColor),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get icon dựa trên category
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'technology':
+        return Icons.computer;
+      case 'business':
+        return Icons.business_center;
+      case 'sports':
+        return Icons.sports_soccer;
+      case 'entertainment':
+        return Icons.movie;
+      case 'health':
+        return Icons.health_and_safety;
+      case 'science':
+        return Icons.science;
+      case 'politics':
+        return Icons.account_balance;
+      default:
+        return Icons.article;
+    }
+  }
 }
 
+/// Helper class để wrap FeedResponse khi không fetch RSS
+class _FeedLoadResult {
+  final FeedResponse feedResponse;
+  final bool rssFetchSuccess;
+
+  _FeedLoadResult({
+    required this.feedResponse,
+    required this.rssFetchSuccess,
+  });
+}
