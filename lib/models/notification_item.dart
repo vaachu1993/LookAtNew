@@ -1,6 +1,6 @@
-enum NotificationType { newsPublished, follow }
+import 'enums/notification_enums.dart';
 
-enum FollowStatus { notFollowing, following }
+export 'enums/notification_enums.dart';
 
 class NotificationItem {
   final String id;
@@ -10,10 +10,8 @@ class NotificationItem {
   final String time;
   final DateTime timestamp;
 
-  // For news notifications
   final String? thumbnailUrl;
 
-  // For follow notifications
   final FollowStatus? followStatus;
 
   NotificationItem({

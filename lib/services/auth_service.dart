@@ -1,56 +1,45 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:lookat_app/Utils/Utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/auth_models.dart';
+import '../models/request/register_request.dart';
+import '../models/response/login_response.dart';
+import '../models/response/google_login_response.dart';
+import '../models/response/refresh_response.dart';
 import '../models/user_dto.dart';
 
 class AuthService {
-  // Base URL - Thay đổi theo môi trường của bạn
-  // Android Emulator: 10.0.2.2
-  // iOS Simulator: localhost
-  // Physical device: IP máy của bạn
-  static const String baseUrl = "http://10.0.2.2:5201/api/Auth";
-
   // SharedPreferences keys
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userKey = 'user_data';
 
-  // Singleton pattern
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
 
-  // ============================================
-  // TOKEN MANAGEMENT
-  // ============================================
-
-  /// Lưu tokens vào SharedPreferences
+  // Lưu token vào SharedPreference
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_accessTokenKey, accessToken);
     await prefs.setString(_refreshTokenKey, refreshToken);
   }
 
-  /// Lưu thông tin user
   Future<void> saveUser(UserDto user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userKey, jsonEncode(user.toJson()));
   }
 
-  /// Lấy access token
   Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_accessTokenKey);
   }
 
-  /// Lấy refresh token
   Future<String?> getRefreshToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_refreshTokenKey);
   }
 
-  /// Lấy thông tin user
   Future<UserDto?> getUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString(_userKey);
@@ -60,7 +49,6 @@ class AuthService {
     return null;
   }
 
-  /// Xóa tất cả tokens và user data
   Future<void> clearTokens() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
@@ -68,7 +56,6 @@ class AuthService {
     await prefs.remove(_userKey);
   }
 
-  /// Kiểm tra user đã đăng nhập chưa
   Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
@@ -78,7 +65,6 @@ class AuthService {
   // API CALLS
   // ============================================
 
-  /// 1️⃣ ĐĂNG KÝ TÀI KHOẢN
   Future<String> registerUser({
     required String username,
     required String email,
@@ -94,13 +80,13 @@ class AuthService {
       );
 
       print('🔵 [AuthService] Registering user...');
-      print('🔵 [AuthService] API URL: $baseUrl/register');
+      print('🔵 [AuthService] API URL: ${Utils.baseUrl + Utils.registerUrl}');
       print('🔵 [AuthService] Username: $username');
       print('🔵 [AuthService] Email: $email');
       print('🔵 [AuthService] Request body: ${jsonEncode(request.toJson())}');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/register'),
+        Uri.parse("${Utils.baseUrl + Utils.registerUrl}"),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(request.toJson()),
       ).timeout(
@@ -108,7 +94,7 @@ class AuthService {
         onTimeout: () {
           throw Exception('Timeout: Không thể kết nối đến server. Vui lòng kiểm tra:\n'
               '1. Backend có đang chạy không?\n'
-              '2. Địa chỉ IP có đúng không? ($baseUrl)');
+              '2. Địa chỉ IP có đúng không? (${Utils.baseUrl + Utils.registerUrl})');
         },
       );
 
@@ -180,7 +166,7 @@ class AuthService {
       print('🔵 [AuthService] OTP: $otpCode');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/verify-otp'),
+        Uri.parse('${Utils.baseUrl + Utils.verify_otp_url}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -235,7 +221,7 @@ class AuthService {
       print('🔵 [AuthService] Email: $email');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/resend-otp'),
+        Uri.parse('${Utils.baseUrl + Utils.resend_otp_url}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -287,7 +273,7 @@ class AuthService {
   Future<String> verifyEmail(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/verify?token=$token'),
+        Uri.parse('${Utils.baseUrl + Utils.verify_email_url}?token=$token'),
       );
 
       if (response.statusCode == 200) {
@@ -308,7 +294,7 @@ class AuthService {
   Future<LoginResponse> login(String email, String password) async {
     try {
       print('🔵 [AuthService] Logging in...');
-      print('🔵 [AuthService] API URL: $baseUrl/login');
+      print('🔵 [AuthService] API URL: ${Utils.baseUrl + Utils.loginUrl}');
       print('🔵 [AuthService] Email: $email');
 
       final requestBody = {
@@ -318,7 +304,7 @@ class AuthService {
       print('🔵 [AuthService] Request body: ${jsonEncode(requestBody)}');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/login'),
+        Uri.parse('${Utils.baseUrl + Utils.loginUrl}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       ).timeout(
@@ -326,7 +312,7 @@ class AuthService {
         onTimeout: () {
           throw Exception('Timeout: Không thể kết nối đến server. Vui lòng kiểm tra:\n'
               '1. Backend có đang chạy không?\n'
-              '2. Địa chỉ IP có đúng không? ($baseUrl)');
+              '2. Địa chỉ IP có đúng không? (${Utils.baseUrl})');
         },
       );
 
@@ -391,10 +377,10 @@ class AuthService {
       // Debug log
       print('🔵 [AuthService] Sending Google ID Token to backend...');
       print('🔵 [AuthService] Token length: ${idToken.length}');
-      print('🔵 [AuthService] API URL: $baseUrl/google');
+      print('🔵 [AuthService] API URL: ${Utils.baseUrl + Utils.google_Url}');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/google'),
+        Uri.parse('${Utils.baseUrl + Utils.google_Url}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'idToken': idToken,
@@ -434,7 +420,7 @@ class AuthService {
   Future<String> requestForgotPassword(String email) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/forgot-password'),
+        Uri.parse('${Utils.baseUrl + Utils.forgotPasswordUrl}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -468,7 +454,7 @@ class AuthService {
   Future<String> resetPassword(String token, String newPassword) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/reset-password'),
+        Uri.parse('${Utils.baseUrl + Utils.reset_password_url}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'token': token,
@@ -495,7 +481,7 @@ class AuthService {
   Future<RefreshResponse> refreshToken(String refreshToken) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/refresh'),
+        Uri.parse('${Utils.baseUrl + Utils.refresh_token_url}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'refreshToken': refreshToken,
@@ -526,7 +512,7 @@ class AuthService {
   Future<void> logout(String accessToken) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/logout'),
+        Uri.parse('${Utils.baseUrl + Utils.logout_url}'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',

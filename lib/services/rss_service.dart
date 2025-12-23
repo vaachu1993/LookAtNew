@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:lookat_app/Utils/Utils.dart';
 import '../core/auth_storage.dart';
 
 /// Service để fetch RSS mới từ nguồn
 /// Gọi backend để crawl RSS và lưu vào database
 class RssService {
-  // Base URL for ASP.NET Core backend
-  static const String _baseUrl = 'http://10.0.2.2:5201/api';
-
   final AuthStorage _authStorage = AuthStorage();
 
   // Singleton pattern
@@ -37,7 +35,7 @@ class RssService {
       };
 
       // Build URL
-      String url = '$_baseUrl/Rss/fetch';
+      String url = '${Utils.baseUrl + Utils.rssFetchUrl}';
       if (category != null && category != 'all') {
         url += '?category=$category';
       }

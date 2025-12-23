@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:lookat_app/Utils/Utils.dart';
 import '../core/auth_storage.dart';
 import '../models/favorite_model.dart';
 
 class FavoriteService {
-  // Base URL for ASP.NET Core backend
-  static const String _baseUrl = 'http://10.0.2.2:5201/api';
-
   final AuthStorage _authStorage = AuthStorage();
 
   // Singleton pattern
@@ -34,7 +32,7 @@ class FavoriteService {
 
       // Make request
       final response = await http.get(
-        Uri.parse('$_baseUrl/favorites'),
+        Uri.parse('${Utils.baseUrl}/favorites'),
         headers: headers,
       ).timeout(const Duration(seconds: 15));
 
@@ -83,7 +81,7 @@ class FavoriteService {
 
       // Make request
       final response = await http.post(
-        Uri.parse('$_baseUrl/favorites'),
+        Uri.parse('${Utils.baseUrl}/favorites'),
         headers: headers,
         body: body,
       ).timeout(const Duration(seconds: 15));
@@ -129,7 +127,7 @@ class FavoriteService {
 
       // Make request
       final response = await http.delete(
-        Uri.parse('$_baseUrl/favorites/$favoriteId'),
+        Uri.parse('${Utils.baseUrl}/favorites/$favoriteId'),
         headers: headers,
       ).timeout(const Duration(seconds: 15));
 

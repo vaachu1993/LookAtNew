@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:lookat_app/Utils/Utils.dart';
 import '../core/auth_storage.dart';
 import '../models/article_model.dart';
 import 'feed_cache_service.dart';
 import 'rss_service.dart';
 
 class FeedService {
-  // Base URL for ASP.NET Core backend
-  static const String _baseUrl = 'http://10.0.2.2:5201/api';
-
   final AuthStorage _authStorage = AuthStorage();
   final FeedCacheService _cacheService = FeedCacheService();
   final RssService _rssService = RssService();
@@ -92,7 +90,7 @@ class FeedService {
       };
 
       // Build URL with category if not 'all'
-      String url = '$_baseUrl/feed';
+      String url = '${Utils.baseUrl}/feed';
       if (category != 'all') {
         url += '?category=$category';
       }

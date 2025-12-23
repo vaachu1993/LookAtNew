@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:lookat_app/Utils/Utils.dart';
 import 'auth_storage.dart';
 import 'api_interceptor.dart';
 import '../models/user.dart';
 
 class ApiClient {
-  // Base URL for ASP.NET Core backend
-  static const String _baseUrl = 'http://10.0.2.2:5201/api';
-  
   final AuthStorage authStorage = AuthStorage();
   final ApiInterceptor _interceptor = ApiInterceptor();
 
@@ -109,7 +107,7 @@ class ApiClient {
 
       final headers = await _buildHeaders(requireAuth: false);
       final response = await http.post(
-        Uri.parse('$_baseUrl/Auth/refresh'),
+        Uri.parse('${Utils.baseUrl + Utils.refresh_token_url}'),
         headers: headers,
         body: jsonEncode({'refreshToken': refreshToken}),
       ).timeout(const Duration(seconds: 10));
@@ -144,7 +142,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: false);
       final response = await http.post(
-        Uri.parse('$_baseUrl/Auth/login'),
+        Uri.parse('${Utils.baseUrl + Utils.loginUrl}'),
         headers: headers,
         body: jsonEncode({
           'email': email,
@@ -217,7 +215,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: false);
       final response = await http.post(
-        Uri.parse('$_baseUrl/Auth/register'),
+        Uri.parse('${Utils.baseUrl + Utils.registerUrl}'),
         headers: headers,
         body: jsonEncode({
           'email': email,
@@ -264,7 +262,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: false);
       final response = await http.post(
-        Uri.parse('$_baseUrl/Auth/google'),
+        Uri.parse('${Utils.baseUrl + Utils.google_Url}'),
         headers: headers,
         body: jsonEncode({'idToken': idToken}),
       ).timeout(const Duration(seconds: 15));
@@ -328,7 +326,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: false);
       final response = await http.post(
-        Uri.parse('$_baseUrl/Auth/forgot-password'),
+        Uri.parse('${Utils.baseUrl + Utils.forgotPasswordUrl}'),
         headers: headers,
         body: jsonEncode({'email': email}),
       ).timeout(const Duration(seconds: 15));
@@ -373,7 +371,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: false);
       final response = await http.post(
-        Uri.parse('$_baseUrl/Auth/reset-password'),
+        Uri.parse('${Utils.baseUrl + Utils.reset_password_url}'),
         headers: headers,
         body: jsonEncode({
           'token': token,
@@ -418,7 +416,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: false);
       final response = await http.get(
-        Uri.parse('$_baseUrl/Auth/test-email?email=${Uri.encodeComponent(email)}'),
+        Uri.parse('${Utils.baseUrl}/Auth/test-email?email=${Uri.encodeComponent(email)}'),
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
@@ -456,7 +454,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: true);
       final response = await http.post(
-        Uri.parse('$_baseUrl/Auth/logout'),
+        Uri.parse('${Utils.baseUrl + Utils.logout_url}'),
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
@@ -496,7 +494,7 @@ class ApiClient {
     try {
       final headers = await _buildHeaders(requireAuth: true);
       final response = await http.get(
-        Uri.parse('$_baseUrl/User/me'),
+        Uri.parse('${Utils.baseUrl}/User/me'),
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
@@ -580,7 +578,7 @@ class ApiClient {
 
       final headers = await _buildHeaders(requireAuth: true);
       final response = await http.put(
-        Uri.parse('$_baseUrl/User/update'),
+        Uri.parse('${Utils.baseUrl}/User/update'),
         headers: headers,
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 15));
@@ -646,7 +644,7 @@ class ApiClient {
         );
       }
 
-      final uri = Uri.parse('$_baseUrl/User/upload-avatar');
+      final uri = Uri.parse('${Utils.baseUrl}/User/upload-avatar');
       final request = http.MultipartRequest('POST', uri);
 
       // Add headers
