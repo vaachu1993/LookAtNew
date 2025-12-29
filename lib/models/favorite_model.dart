@@ -5,7 +5,7 @@ class FavoriteModel {
   final String articleId;
   final String userId;
   final DateTime createdAt;
-  final ArticleModel? article; // Optional, may be included in response
+  final ArticleModel? article;
 
   FavoriteModel({
     required this.id,
@@ -15,7 +15,6 @@ class FavoriteModel {
     this.article,
   });
 
-  // Create from JSON response from backend
   factory FavoriteModel.fromJson(Map<String, dynamic> json) {
     return FavoriteModel(
       id: json['id'] as String? ?? '',
@@ -28,7 +27,6 @@ class FavoriteModel {
     );
   }
 
-  // Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -39,7 +37,6 @@ class FavoriteModel {
     };
   }
 
-  // Helper to parse dates safely
   static DateTime _parseDate(dynamic dateValue) {
     if (dateValue == null) {
       return DateTime.now();

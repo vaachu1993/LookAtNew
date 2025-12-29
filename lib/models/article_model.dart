@@ -23,7 +23,6 @@ class ArticleModel {
     this.isBookmarked = false,
   });
 
-  // Create from JSON response from backend
   factory ArticleModel.fromJson(Map<String, dynamic> json) {
     return ArticleModel(
       id: json['id'] as String? ?? '',
@@ -39,7 +38,6 @@ class ArticleModel {
     );
   }
 
-  // Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -70,7 +68,6 @@ class ArticleModel {
     return DateTime.now();
   }
 
-  // Copy with method for updating fields
   ArticleModel copyWith({
     String? id,
     String? title,
@@ -97,7 +94,6 @@ class ArticleModel {
     );
   }
 
-  // Get time ago string
   String get timeAgo {
     final now = DateTime.now();
     final difference = now.difference(pubDate);
@@ -117,21 +113,18 @@ class ArticleModel {
     }
   }
 
-  // Get estimated read time (assuming 200 words per minute)
   String get readTime {
     final wordCount = description.split(' ').length;
     final minutes = (wordCount / 200).ceil();
     return '$minutes min read';
   }
 
-  // Check if article has valid thumbnail
   bool get hasThumbnail {
     return thumbnail.isNotEmpty &&
            thumbnail != 'null' &&
            Uri.tryParse(thumbnail)?.hasAbsolutePath == true;
   }
 
-  // Get placeholder color based on category
   int get placeholderColor {
     switch (category.toLowerCase()) {
       case 'technology':

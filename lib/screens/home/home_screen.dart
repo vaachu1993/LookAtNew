@@ -3,6 +3,7 @@ import '../../widgets/common_bottom_nav_bar.dart';
 import '../../models/article_model.dart';
 import '../../services/feed_service.dart';
 import '../../services/favorite_service.dart';
+import '../article/article_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -526,7 +527,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildFeaturedNewsItem(ArticleModel article) {
     return GestureDetector(
       onTap: () {
-        // Navigate to article detail or open link
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(article: article),
+          ),
+        );
       },
       child: SizedBox(
         width: 230,
@@ -752,7 +758,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildRecentStoryItem(ArticleModel article) {
     return GestureDetector(
       onTap: () {
-        // Navigate to article detail or open link
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(article: article),
+          ),
+        );
       },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

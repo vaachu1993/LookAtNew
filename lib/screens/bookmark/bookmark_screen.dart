@@ -3,6 +3,7 @@ import '../../widgets/common_bottom_nav_bar.dart';
 import '../../models/favorite_model.dart';
 import '../../models/article_model.dart';
 import '../../services/favorite_service.dart';
+import '../article/article_detail_screen.dart';
 
 class BookmarkScreen extends StatefulWidget {
   const BookmarkScreen({super.key});
@@ -304,7 +305,12 @@ class _BookmarkScreenState extends State<BookmarkScreen>
   Widget _buildArticleCard(ArticleModel article, FavoriteModel favorite) {
     return GestureDetector(
       onTap: () {
-        // Navigate to article detail or open link
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(article: article),
+          ),
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),

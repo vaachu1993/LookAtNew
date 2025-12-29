@@ -1,5 +1,5 @@
 class Utils {
-  static String baseUrl = 'http://10.0.2.2:9091/api';
+  static String baseUrl = 'http://10.0.2.2:5201/api';
   static String registerUrl = "/Auth/register";
   static String loginUrl = "/Auth/login";
   static String google_Url = "/Auth/google";

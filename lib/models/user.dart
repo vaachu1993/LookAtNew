@@ -17,7 +17,6 @@ class User {
     this.updatedAt,
   });
 
-  // Factory constructor from JSON
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id']?.toString() ?? '',
@@ -34,7 +33,6 @@ class User {
     );
   }
 
-  // Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -47,7 +45,6 @@ class User {
     };
   }
 
-  // Immutable copyWith method
   User copyWith({
     String? id,
     String? email,
