@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common_bottom_nav_bar.dart';
 import '../../models/article_model.dart';
-import '../../services/feed_service.dart';
+import '../../services/article_service.dart';
 import '../../services/favorite_service.dart';
 import '../article/article_detail_screen.dart';
 
@@ -13,14 +13,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final FeedService _feedService = FeedService();
+  final ArticleService _articleService = ArticleService();
   final FavoriteService _favoriteService = FavoriteService();
 
   List<ArticleModel> _articles = [];
   bool _isLoading = true;
-  bool _isLoadingFromCache = false;
   String? _errorMessage;
-  String? _cacheWarning;
 
   // Track favorites by articleId -> favoriteId mapping
   Map<String, String> _favoriteIds = {};
@@ -28,38 +26,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Current category (có thể mở rộng cho multi-category)
   String _currentCategory = 'all';
 
-  // Flag to check if need to fetch RSS after login
-  bool _hasCheckedLoginFlag = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadFeed(forceRefresh: false); // Cold start - check cache first
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // Check arguments once after login
-    if (!_hasCheckedLoginFlag) {
-      _hasCheckedLoginFlag = true;
-      _checkLoginFlag();
-    }
-  }
-
-  /// Check nếu user vừa login và cần fetch RSS
-  void _checkLoginFlag() {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map<String, dynamic> && args['shouldFetchRss'] == true) {
-      // User vừa login → Fetch RSS ngay
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _loadFeed(forceRefresh: true); // Fetch RSS + get feed
-        }
-      });
-    }
+    // Luôn fetch RSS + articles khi vào app
+    _loadArticles(fetchRss: true);
   }
 
   @override
@@ -73,74 +45,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // App resume từ background
+    // App resume từ background → fetch RSS + articles
     if (state == AppLifecycleState.resumed) {
-      _handleAppResume();
+      _loadArticles(fetchRss: true, silent: true);
     }
   }
 
-  /// Xử lý khi app resume từ background
-  Future<void> _handleAppResume() async {
-    // Kiểm tra có cần fetch không dựa trên thời gian
-    final shouldFetch = await _feedService.shouldFetchOnResume(_currentCategory);
-
-    if (shouldFetch) {
-      // >= 10 phút → fetch mới
-      await _loadFeed(forceRefresh: true, silent: true);
-    }
-    // < 5 phút → không làm gì, dùng cache hiện tại
-  }
-
-  /// Load feed với cache logic
+  /// Load articles với RSS fetch
   ///
-  /// [forceRefresh] - true = pull-to-refresh (fetch RSS + get feed), false = check cache
+  /// [fetchRss] - true = fetch RSS mới trước khi lấy articles
   /// [silent] - true = không show loading UI (background refresh)
-  Future<void> _loadFeed({
-    bool forceRefresh = false,
+  Future<void> _loadArticles({
+    bool fetchRss = true,
     bool silent = false,
   }) async {
     if (!silent) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
-        _cacheWarning = null;
       });
     }
 
-    // Load feed with RSS fetch logic
-    // forceRefresh = true → Fetch RSS mới từ nguồn rồi get feed
-    // forceRefresh = false → Chỉ get feed (dùng cache nếu có)
-    late dynamic response;
+    late ArticleResponseWithRssFetch response;
 
-    if (forceRefresh) {
-      // Pull-to-refresh → Fetch RSS mới rồi get feed
-      response = await _feedService.fetchRssAndGetFeed(
-        category: _currentCategory,
-        silent: silent,
+    if (fetchRss) {
+      // Fetch RSS mới từ nguồn rồi lấy tất cả articles
+      response = await _articleService.fetchRssAndGetArticles(
+        category: _currentCategory == 'all' ? null : _currentCategory,
       );
     } else {
-      // Cold start hoặc background refresh → Chỉ get feed từ database
-      final feedResponse = await _feedService.getFeed(
-        category: _currentCategory,
-        forceRefresh: false,
-      );
-      // Wrap vào response tương tự
-      response = _FeedLoadResult(
-        feedResponse: feedResponse,
+      // Chỉ lấy articles (không fetch RSS)
+      final articleResponse = _currentCategory == 'all'
+          ? await _articleService.getAllArticles()
+          : await _articleService.getArticlesByCategory(_currentCategory);
+
+      response = ArticleResponseWithRssFetch(
+        articleResponse: articleResponse,
         rssFetchSuccess: false,
+        articlesCount: 0,
       );
     }
 
     // Load favorites in parallel
     final favoritesResponse = await _favoriteService.getFavorites();
 
-    // Extract feedResponse
-    final feedResponse = response is FeedResponseWithRssFetch
-        ? response.feedResponse
-        : (response as _FeedLoadResult).feedResponse;
-
     if (mounted) {
-      if (feedResponse.isSuccess) {
+      final articleResponse = response.articleResponse;
+
+      if (articleResponse.isSuccess && articleResponse.articles != null) {
         // Build favorite mapping
         final favoriteMap = <String, String>{};
         if (favoritesResponse.isSuccess && favoritesResponse.favorites != null) {
@@ -150,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
 
         // Mark articles as bookmarked
-        final articles = feedResponse.articles!.map((article) {
+        final articles = articleResponse.articles!.map((article) {
           final isFavorite = favoriteMap.containsKey(article.id);
           return article.copyWith(isBookmarked: isFavorite);
         }).toList();
@@ -159,60 +111,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _articles = articles;
           _favoriteIds = favoriteMap;
           _isLoading = false;
-          _isLoadingFromCache = feedResponse.fromCache;
-          _cacheWarning = feedResponse.cacheWarning;
         });
 
-        // Show appropriate indicator
-        if (!silent && mounted) {
-          if (response is FeedResponseWithRssFetch && response.rssFetchSuccess) {
-            // RSS fetch thành công - show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.refresh, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${response.articlesCount} new articles fetched',
-                        style: const TextStyle(fontSize: 13),
-                      ),
+        // Show success message nếu RSS fetch thành công
+        if (!silent && mounted && response.rssFetchSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.refresh, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Đã cập nhật ${response.articlesCount} bài viết mới',
+                      style: const TextStyle(fontSize: 13),
                     ),
-                  ],
-                ),
-                duration: const Duration(seconds: 2),
-                backgroundColor: Colors.green.shade700,
+                  ),
+                ],
               ),
-            );
-          } else if (feedResponse.fromCache) {
-            // Dùng cache - show cache indicator
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.offline_bolt, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        feedResponse.cacheWarning ?? 'Showing cached articles',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-                duration: const Duration(seconds: 2),
-                backgroundColor: Colors.orange.shade700,
-              ),
-            );
-          }
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.green.shade700,
+            ),
+          );
         }
       } else {
         setState(() {
-          _errorMessage = feedResponse.error ?? 'Failed to load feed';
+          _errorMessage = articleResponse.error ?? 'Không thể tải bài viết';
           _isLoading = false;
-          _isLoadingFromCache = false;
         });
+
+        // Show error nếu có
+        if (!silent && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_errorMessage!),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
       }
     }
   }
@@ -353,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _loadFeed,
+              onPressed: () => _loadArticles(fetchRss: true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE20035),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -406,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _loadFeed,
+              onPressed: () => _loadArticles(fetchRss: true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE20035),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -428,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildContent() {
     return RefreshIndicator(
-      onRefresh: _loadFeed,
+      onRefresh: () => _loadArticles(fetchRss: true),
       color: const Color(0xFFE20035),
       child: SafeArea(
         bottom: false,
@@ -1000,13 +936,3 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
-/// Helper class để wrap FeedResponse khi không fetch RSS
-class _FeedLoadResult {
-  final FeedResponse feedResponse;
-  final bool rssFetchSuccess;
-
-  _FeedLoadResult({
-    required this.feedResponse,
-    required this.rssFetchSuccess,
-  });
-}
