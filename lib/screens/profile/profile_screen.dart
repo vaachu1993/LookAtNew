@@ -7,6 +7,7 @@ import '../../core/image_picker_helper.dart';
 import '../../models/user.dart';
 import '../../widgets/common_bottom_nav_bar.dart';
 import 'edit_name_dialog.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -293,6 +294,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _handleChangePassword() {
+    // Check if user is Google account
+    if (_user?.isGoogleAccount == true) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Không thể đổi mật khẩu',
+            style: TextStyle(
+              color: Color(0xFF1C1C1E),
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: const Text(
+            'Tài khoản Google không thể đổi mật khẩu tại đây. Vui lòng quản lý mật khẩu qua tài khoản Google của bạn.',
+            style: TextStyle(
+              color: Color(0xFF8E8E93),
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFE20035),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Đã hiểu',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Navigate to change password screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ChangePasswordScreen(),
+      ),
+    );
+  }
+
   void _showEditNameDialog() {
     if (_user == null) return;
     showDialog(
@@ -573,7 +630,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildProfileItem(
               icon: Icons.lock_outline,
               title: 'Đổi mật khẩu',
-              onTap: _showFeatureInDevelopment,
+              onTap: _handleChangePassword,
             ),
 
             // Preferences section

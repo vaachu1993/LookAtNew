@@ -4,6 +4,7 @@ class User {
   final String username;
   final String? avatarUrl;
   final bool isVerified;
+  final bool isGoogleAccount;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -13,6 +14,7 @@ class User {
     required this.username,
     this.avatarUrl,
     this.isVerified = false,
+    this.isGoogleAccount = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -24,6 +26,7 @@ class User {
       username: json['username']?.toString() ?? '',
       avatarUrl: json['avatarUrl']?.toString(),
       isVerified: json['isVerified'] as bool? ?? false,
+      isGoogleAccount: json['isGoogleAccount'] as bool? ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
@@ -40,6 +43,7 @@ class User {
       'username': username,
       'avatarUrl': avatarUrl,
       'isVerified': isVerified,
+      'isGoogleAccount': isGoogleAccount,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
@@ -51,6 +55,7 @@ class User {
     String? username,
     String? avatarUrl,
     bool? isVerified,
+    bool? isGoogleAccount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -60,6 +65,7 @@ class User {
       username: username ?? this.username,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       isVerified: isVerified ?? this.isVerified,
+      isGoogleAccount: isGoogleAccount ?? this.isGoogleAccount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
