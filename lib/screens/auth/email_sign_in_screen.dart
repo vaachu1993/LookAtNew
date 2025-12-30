@@ -45,11 +45,8 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
       if (!mounted) return;
 
-      // Đăng nhập thành công, chuyển sang HomeScreen và trigger fetch RSS
-      Navigator.of(context).pushReplacementNamed(
-        '/home',
-        arguments: {'shouldFetchRss': true}, // Trigger RSS fetch
-      );
+      // Đăng nhập thành công, chuyển sang HomeScreen (sẽ tự động fetch RSS)
+      Navigator.of(context).pushReplacementNamed('/home');
 
       _showSuccess('Đăng nhập thành công! Xin chào ${response.user.username}');
     } catch (e) {
@@ -159,11 +156,8 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
       print('✅ [UI] Login successful, navigating to HomeScreen...');
 
-      // Đăng nhập thành công, chuyển sang HomeScreen và trigger fetch RSS
-      Navigator.of(context).pushReplacementNamed(
-        '/home',
-        arguments: {'shouldFetchRss': true}, // Trigger RSS fetch
-      );
+      // Đăng nhập thành công, chuyển sang HomeScreen (sẽ tự động fetch RSS)
+      Navigator.of(context).pushReplacementNamed('/home');
 
       _showSuccess('Đăng nhập Google thành công! Xin chào ${response.user.username}');
     } catch (e) {

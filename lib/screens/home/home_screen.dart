@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common_bottom_nav_bar.dart';
 import '../../models/article_model.dart';
-import '../../services/feed_service.dart';
+import '../../services/article_service.dart';
 import '../../services/favorite_service.dart';
+import '../../services/category_service.dart';
 import '../article/article_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,53 +14,32 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final FeedService _feedService = FeedService();
+  final ArticleService _articleService = ArticleService();
   final FavoriteService _favoriteService = FavoriteService();
+  final CategoryService _categoryService = CategoryService();
 
-  List<ArticleModel> _articles = [];
+  List<ArticleModel> _allArticles = []; // Tất cả articles
+  List<ArticleModel> _articles = []; // Filtered articles theo category
   bool _isLoading = true;
-  bool _isLoadingFromCache = false;
   String? _errorMessage;
-  String? _cacheWarning;
 
   // Track favorites by articleId -> favoriteId mapping
   Map<String, String> _favoriteIds = {};
 
+  // Categories
+  List<String> _categories = [];
+  bool _isCategoriesLoading = true;
+
   // Current category (có thể mở rộng cho multi-category)
   String _currentCategory = 'all';
-
-  // Flag to check if need to fetch RSS after login
-  bool _hasCheckedLoginFlag = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadFeed(forceRefresh: false); // Cold start - check cache first
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // Check arguments once after login
-    if (!_hasCheckedLoginFlag) {
-      _hasCheckedLoginFlag = true;
-      _checkLoginFlag();
-    }
-  }
-
-  /// Check nếu user vừa login và cần fetch RSS
-  void _checkLoginFlag() {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map<String, dynamic> && args['shouldFetchRss'] == true) {
-      // User vừa login → Fetch RSS ngay
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _loadFeed(forceRefresh: true); // Fetch RSS + get feed
-        }
-      });
-    }
+    // Load articles trước, categories sẽ được extract từ articles
+    // Điều này đảm bảo category names khớp với data thực tế
+    _loadArticles(fetchRss: true);
   }
 
   @override
@@ -73,74 +53,92 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // App resume từ background
+    // App resume từ background → fetch RSS + articles
     if (state == AppLifecycleState.resumed) {
-      _handleAppResume();
+      _loadArticles(fetchRss: true, silent: true);
     }
   }
 
-  /// Xử lý khi app resume từ background
-  Future<void> _handleAppResume() async {
-    // Kiểm tra có cần fetch không dựa trên thời gian
-    final shouldFetch = await _feedService.shouldFetchOnResume(_currentCategory);
-
-    if (shouldFetch) {
-      // >= 10 phút → fetch mới
-      await _loadFeed(forceRefresh: true, silent: true);
+  /// Update categories từ articles
+  /// Luôn extract từ articles để đảm bảo category names khớp với data thực tế
+  void _updateCategoriesFromArticles() {
+    if (_allArticles.isNotEmpty) {
+      final extractedCategories = _categoryService.extractCategoriesFromArticles(_allArticles);
+      if (extractedCategories.isNotEmpty) {
+        setState(() {
+          _categories = extractedCategories;
+          _isCategoriesLoading = false;
+        });
+      }
     }
-    // < 5 phút → không làm gì, dùng cache hiện tại
   }
 
-  /// Load feed với cache logic
+  /// Xử lý khi chọn category
+  void _onCategorySelected(String category) {
+    if (_currentCategory == category) return;
+
+    setState(() {
+      _currentCategory = category;
+    });
+
+    // Filter lại từ _allArticles thay vì reload từ API
+    _filterArticlesByCategory();
+  }
+
+  /// Filter articles theo category đã chọn
+  void _filterArticlesByCategory() {
+    setState(() {
+      if (_currentCategory == 'all') {
+        _articles = List.from(_allArticles);
+      } else {
+        _articles = _allArticles.where((article) =>
+          article.category.toLowerCase() == _currentCategory.toLowerCase()
+        ).toList();
+      }
+    });
+  }
+
+  /// Load articles với RSS fetch
   ///
-  /// [forceRefresh] - true = pull-to-refresh (fetch RSS + get feed), false = check cache
+  /// [fetchRss] - true = fetch RSS mới trước khi lấy articles
   /// [silent] - true = không show loading UI (background refresh)
-  Future<void> _loadFeed({
-    bool forceRefresh = false,
+  Future<void> _loadArticles({
+    bool fetchRss = true,
     bool silent = false,
   }) async {
     if (!silent) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
-        _cacheWarning = null;
       });
     }
 
-    // Load feed with RSS fetch logic
-    // forceRefresh = true → Fetch RSS mới từ nguồn rồi get feed
-    // forceRefresh = false → Chỉ get feed (dùng cache nếu có)
-    late dynamic response;
+    late ArticleResponseWithRssFetch response;
 
-    if (forceRefresh) {
-      // Pull-to-refresh → Fetch RSS mới rồi get feed
-      response = await _feedService.fetchRssAndGetFeed(
-        category: _currentCategory,
-        silent: silent,
+    if (fetchRss) {
+      // Fetch RSS mới từ nguồn rồi lấy TẤT CẢ articles
+      // Không filter theo category ở API để tránh lỗi khi backend đổi tên
+      response = await _articleService.fetchRssAndGetArticles(
+        category: null, // Luôn lấy tất cả
       );
     } else {
-      // Cold start hoặc background refresh → Chỉ get feed từ database
-      final feedResponse = await _feedService.getFeed(
-        category: _currentCategory,
-        forceRefresh: false,
-      );
-      // Wrap vào response tương tự
-      response = _FeedLoadResult(
-        feedResponse: feedResponse,
+      // Chỉ lấy TẤT CẢ articles (không fetch RSS)
+      final articleResponse = await _articleService.getAllArticles();
+
+      response = ArticleResponseWithRssFetch(
+        articleResponse: articleResponse,
         rssFetchSuccess: false,
+        articlesCount: 0,
       );
     }
 
     // Load favorites in parallel
     final favoritesResponse = await _favoriteService.getFavorites();
 
-    // Extract feedResponse
-    final feedResponse = response is FeedResponseWithRssFetch
-        ? response.feedResponse
-        : (response as _FeedLoadResult).feedResponse;
-
     if (mounted) {
-      if (feedResponse.isSuccess) {
+      final articleResponse = response.articleResponse;
+
+      if (articleResponse.isSuccess && articleResponse.articles != null) {
         // Build favorite mapping
         final favoriteMap = <String, String>{};
         if (favoritesResponse.isSuccess && favoritesResponse.favorites != null) {
@@ -150,69 +148,70 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
 
         // Mark articles as bookmarked
-        final articles = feedResponse.articles!.map((article) {
+        var articles = articleResponse.articles!.map((article) {
           final isFavorite = favoriteMap.containsKey(article.id);
           return article.copyWith(isBookmarked: isFavorite);
         }).toList();
 
+        // Sắp xếp theo pubDate giảm dần (bài mới nhất trước)
+        articles.sort((a, b) => b.pubDate.compareTo(a.pubDate));
+
+        // Lưu tất cả articles
+        _allArticles = articles;
+
+        // Filter theo category hiện tại
+        var filteredArticles = articles;
+        if (_currentCategory != 'all') {
+          filteredArticles = articles.where((article) =>
+            article.category.toLowerCase() == _currentCategory.toLowerCase()
+          ).toList();
+        }
+
         setState(() {
-          _articles = articles;
+          _articles = filteredArticles;
           _favoriteIds = favoriteMap;
           _isLoading = false;
-          _isLoadingFromCache = feedResponse.fromCache;
-          _cacheWarning = feedResponse.cacheWarning;
         });
 
-        // Show appropriate indicator
-        if (!silent && mounted) {
-          if (response is FeedResponseWithRssFetch && response.rssFetchSuccess) {
-            // RSS fetch thành công - show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.refresh, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${response.articlesCount} new articles fetched',
-                        style: const TextStyle(fontSize: 13),
-                      ),
+        // Update categories từ articles nếu chưa có
+        _updateCategoriesFromArticles();
+
+        // Show success message nếu RSS fetch thành công
+        if (!silent && mounted && response.rssFetchSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.refresh, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Đã cập nhật ${response.articlesCount} bài viết mới',
+                      style: const TextStyle(fontSize: 13),
                     ),
-                  ],
-                ),
-                duration: const Duration(seconds: 2),
-                backgroundColor: Colors.green.shade700,
+                  ),
+                ],
               ),
-            );
-          } else if (feedResponse.fromCache) {
-            // Dùng cache - show cache indicator
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.offline_bolt, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        feedResponse.cacheWarning ?? 'Showing cached articles',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-                duration: const Duration(seconds: 2),
-                backgroundColor: Colors.orange.shade700,
-              ),
-            );
-          }
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.green.shade700,
+            ),
+          );
         }
       } else {
         setState(() {
-          _errorMessage = feedResponse.error ?? 'Failed to load feed';
+          _errorMessage = articleResponse.error ?? 'Không thể tải bài viết';
           _isLoading = false;
-          _isLoadingFromCache = false;
         });
+
+        // Show error nếu có
+        if (!silent && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_errorMessage!),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
       }
     }
   }
@@ -353,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _loadFeed,
+              onPressed: () => _loadArticles(fetchRss: true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE20035),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -386,39 +385,72 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               size: 64,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'No articles available',
+            Text(
+              _currentCategory == 'all'
+                ? 'No articles available'
+                : 'No articles in "${_getCategoryLabel(_currentCategory)}"',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Check back later for new content',
+            Text(
+              _currentCategory == 'all'
+                ? 'Pull down to refresh or check back later'
+                : 'Try selecting a different category or refresh',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.grey,
                 fontSize: 14,
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loadFeed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE20035),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-              child: const Text(
-                'Refresh',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_currentCategory != 'all')
+                  ElevatedButton(
+                    onPressed: () => _onCategorySelected('all'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[700],
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text(
+                      'View All',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                if (_currentCategory != 'all')
+                  const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    // Reset về 'all' và force refresh
+                    setState(() {
+                      _currentCategory = 'all';
+                    });
+                    _loadArticles(fetchRss: true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE20035),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: const Text(
+                    'Refresh',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -428,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildContent() {
     return RefreshIndicator(
-      onRefresh: _loadFeed,
+      onRefresh: () => _loadArticles(fetchRss: true),
       color: const Color(0xFFE20035),
       child: SafeArea(
         bottom: false,
@@ -442,6 +474,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 16),
+                  // Category buttons
+                  if (!_isCategoriesLoading && _categories.isNotEmpty)
+                    _buildCategoryButtons(),
+                  if (!_isCategoriesLoading && _categories.isNotEmpty)
+                    const SizedBox(height: 16),
                   if (_featuredArticles.isNotEmpty) _buildFeaturedNews(),
                   const SizedBox(height: 20),
                 ],
@@ -459,23 +496,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildHeader() {
+    // Format current date
+    final now = DateTime.now();
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final months = ['January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    final dayName = days[now.weekday - 1];
+    final monthName = months[now.month - 1];
+    final dateString = '$dayName ${monthName} ${now.day}, ${now.year}';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Menu icon - small and compact
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE20035),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.menu,
-              color: Colors.white,
-              size: 20,
-            ),
+          // Menu icon và Refresh icon
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE20035),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.menu,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              // Refresh button
+              GestureDetector(
+                onTap: () {
+                  // Force refresh tất cả articles và categories
+                  setState(() {
+                    _currentCategory = 'all';
+                  });
+                  _loadArticles(fetchRss: true);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1C1C1E),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF3A3A3C),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.refresh,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
 
@@ -492,10 +569,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 8),
 
-          // Date
-          const Text(
-            'Monday January 16, 2024',
-            style: TextStyle(
+          // Date - dynamic
+          Text(
+            dateString,
+            style: const TextStyle(
               color: Color(0xFF8E8E93),
               fontSize: 14,
               fontWeight: FontWeight.w400,
@@ -504,6 +581,71 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  Widget _buildCategoryButtons() {
+    // Thêm "Tất cả" vào đầu danh sách
+    final allCategories = ['all', ..._categories];
+
+    return SizedBox(
+      height: 42,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: allCategories.length,
+        itemBuilder: (context, index) {
+          final category = allCategories[index];
+          final isSelected = _currentCategory == category;
+
+          return Padding(
+            padding: EdgeInsets.only(right: index < allCategories.length - 1 ? 12 : 0),
+            child: _buildCategoryButton(
+              label: _getCategoryLabel(category),
+              isSelected: isSelected,
+              onTap: () => _onCategorySelected(category),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCategoryButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE20035) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFE20035) : const Color(0xFF3A3A3C),
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFF8E8E93),
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getCategoryLabel(String category) {
+    if (category == 'all') return 'Tất cả';
+
+    // Viết hoa chữ cái đầu
+    return category[0].toUpperCase() + category.substring(1);
   }
 
   Widget _buildFeaturedNews() {
@@ -1000,13 +1142,3 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
-/// Helper class để wrap FeedResponse khi không fetch RSS
-class _FeedLoadResult {
-  final FeedResponse feedResponse;
-  final bool rssFetchSuccess;
-
-  _FeedLoadResult({
-    required this.feedResponse,
-    required this.rssFetchSuccess,
-  });
-}
