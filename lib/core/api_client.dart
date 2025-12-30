@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:lookat_app/Utils/Utils.dart';
 import 'auth_storage.dart';
@@ -705,6 +706,101 @@ class ApiClient {
       );
     } catch (e) {
       return ApiResponse<String>.error(
+        message: 'Error: ${e.toString()}',
+        statusCode: 0,
+        error: e,
+      );
+    }
+  }
+
+  /// Change user password
+  /// POST /User/change-password
+  Future<ApiResponse<void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final headers = await _buildHeaders(requireAuth: true);
+
+      // Use exact field names that .NET backend expects
+      // Common conventions: CurrentPassword, NewPassword (PascalCase)
+      // or currentPassword, newPassword (camelCase)
+      final requestBody = {
+        'OldPassword': currentPassword,
+        'NewPassword': newPassword,
+      };
+
+      final body = jsonEncode(requestBody);
+
+      print('🔐 Change Password Request:');
+      print('URL: ${Utils.baseUrl}/User/change-password');
+      print('Headers: $headers');
+      print('Body: $body');
+
+      final response = await http.post(
+        Uri.parse('${Utils.baseUrl}/User/change-password'),
+        headers: headers,
+        body: body,
+      ).timeout(const Duration(seconds: 15));
+
+      print('🔐 Change Password Response:');
+      print('Status: ${response.statusCode}');
+      print('Body: ${response.body}');
+      print('Headers: ${response.headers}');
+
+      // Handle 401
+      if (response.statusCode == 401) {
+        final refreshed = await _refreshToken();
+        if (refreshed) {
+          return changePassword(
+            currentPassword: currentPassword,
+            newPassword: newPassword,
+          );
+        } else {
+          await authStorage.deleteTokens();
+          return ApiResponse<void>.error(
+            message: 'Session expired',
+            statusCode: 401,
+          );
+        }
+      }
+
+      if (response.statusCode == 200) {
+        return ApiResponse<void>.success(
+          data: null,
+          statusCode: 200,
+          message: 'Password changed successfully',
+        );
+      }
+
+      final responseBody = _parseJsonResponse(response.body);
+      final message = responseBody['message'] as String? ?? 'Password change failed';
+
+      print('❌ Error message: $message');
+      print('❌ Full response: $responseBody');
+
+      return ApiResponse<void>.error(
+        message: message,
+        statusCode: response.statusCode,
+        error: responseBody,
+      );
+    } on http.ClientException catch (e) {
+      print('💥 HTTP Client Exception: ${e.message}');
+      return ApiResponse<void>.error(
+        message: 'Network error: ${e.message}',
+        statusCode: 0,
+        error: e,
+      );
+    } on TimeoutException catch (e) {
+      print('⏱️ Timeout Exception: $e');
+      return ApiResponse<void>.error(
+        message: 'Request timeout',
+        statusCode: 0,
+        error: e,
+      );
+    } catch (e) {
+      print('💥 Unknown Exception: $e');
+      return ApiResponse<void>.error(
         message: 'Error: ${e.toString()}',
         statusCode: 0,
         error: e,
