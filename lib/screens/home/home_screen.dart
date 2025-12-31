@@ -5,6 +5,7 @@ import '../../models/article_model.dart';
 import '../../services/article_service.dart';
 import '../../services/favorite_service.dart';
 import '../../services/category_service.dart';
+import '../../Utils/Utils.dart';
 import '../article/article_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -37,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    Utils.selectIndex = 0; // Set current tab index
     WidgetsBinding.instance.addObserver(this);
     // Load articles trước, categories sẽ được extract từ articles
     // Điều này đảm bảo category names khớp với data thực tế
@@ -1210,9 +1212,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildBottomNavBar() {
-    return CommonBottomNavBar(
-      currentIndex: 0, // Home tab active
-    );
+    return const CommonBottomNavBar();
   }
 
   /// Build placeholder khi không có thumbnail

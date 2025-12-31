@@ -1,5 +1,11 @@
+import 'package:flutter/material.dart';
+
 class Utils {
-  static String baseUrl = 'http://10.0.2.2:5201/api';
+  static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  static int selectIndex = 0;
+
+  static String baseUrl = 'http://10.0.2.2:9091/api';
   static String registerUrl = "/Auth/register";
   static String loginUrl = "/Auth/login";
   static String google_Url = "/Auth/google";

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/notification_item.dart';
 import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Utils/Utils.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -89,6 +90,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
+    Utils.selectIndex = 3; // Set current tab index
     // Initialize follow status map
     for (var notification in notifications) {
       if (notification.followStatus != null) {
@@ -153,9 +155,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ],
       ),
-      bottomNavigationBar: const CommonBottomNavBar(
-        currentIndex: 3, // Notifications tab active
-      ),
+      bottomNavigationBar: const CommonBottomNavBar(),
     );
   }
 

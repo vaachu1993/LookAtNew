@@ -9,11 +9,11 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/explore/explore_screen.dart';
 import 'screens/bookmark/bookmark_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
+import 'Utils/Utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set status bar style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -31,6 +31,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ToastificationWrapper(
       child: MaterialApp(
+        navigatorKey: Utils.navigatorKey,
         title: 'LookAt',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(

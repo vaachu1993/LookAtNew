@@ -1,11 +1,56 @@
 import 'package:flutter/material.dart';
+import '../Utils/Utils.dart';
 import '../services/auth_service.dart';
 
 class CommonBottomNavBar extends StatelessWidget {
-  final int currentIndex;
-  final Function(int)? onTap;
+  const CommonBottomNavBar({super.key});
 
-  const CommonBottomNavBar({super.key, required this.currentIndex, this.onTap});
+  void _tabItemClick(int index) async {
+    Utils.selectIndex = index;
+    BuildContext context = Utils.navigatorKey.currentContext!;
+
+    switch (index) {
+      case 0: // Home
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+        break;
+
+      case 1: // Explore
+        Navigator.of(context).pushNamed('/explore');
+        break;
+
+      case 2: // Bookmark
+        Navigator.of(context).pushNamed('/bookmark');
+        break;
+
+      case 3: // Notifications
+        Navigator.of(context).pushNamed('/notifications');
+        break;
+
+      case 4: // Account
+        final authService = AuthService();
+        final isLoggedIn = await authService.isLoggedIn();
+
+        if (!context.mounted) return;
+
+        if (!isLoggedIn) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Vui lòng đăng nhập để xem thông tin tài khoản'),
+              backgroundColor: Colors.orange.shade900,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+          return;
+        }
+
+        Navigator.of(context).pushNamed('/profile');
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,16 +66,8 @@ class CommonBottomNavBar extends StatelessWidget {
         ],
       ),
       child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) async {
-          if (onTap != null) {
-            onTap!(index);
-            return;
-          }
-
-          // Default navigation logic
-          await _handleNavigation(context, index);
-        },
+        currentIndex: Utils.selectIndex,
+        onTap: (index) => _tabItemClick(index),
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFFE20035),
@@ -66,63 +103,5 @@ class CommonBottomNavBar extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _handleNavigation(BuildContext context, int index) async {
-    // Prevent navigation if already on the same tab
-    if (index == currentIndex) {
-      return;
-    }
-
-    switch (index) {
-      case 0: // Home
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/home', (route) => false);
-        break;
-
-      case 1: // Explore
-        Navigator.of(context).pushNamed('/explore');
-        break;
-
-      case 2: // Bookmark
-        Navigator.of(context).pushNamed('/bookmark');
-        break;
-
-      case 3: // Notifications
-        Navigator.of(context).pushNamed('/notifications');
-        break;
-
-      case 4: // Account
-        // Check if user is logged in before navigating to profile
-        final authService = AuthService();
-        final isLoggedIn = await authService.isLoggedIn();
-
-        if (!context.mounted) return;
-
-        if (!isLoggedIn) {
-          // Not logged in, redirect to login
-          Navigator.of(
-            context,
-          ).pushNamedAndRemoveUntil('/login', (route) => false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Vui lòng đăng nhập để xem thông tin tài khoản',
-              ),
-              backgroundColor: Colors.orange.shade900,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-          return;
-        }
-
-        // User is logged in, navigate to profile
-        Navigator.of(context).pushNamed('/profile');
-        break;
-    }
   }
 }
