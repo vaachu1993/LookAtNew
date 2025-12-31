@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
-import 'widgets/custom_text_field.dart';
-import 'widgets/google_sign_in_button.dart';
+import '../../Components/CustomTextField.dart';
+import '../../Components/GoogleSignInButton.dart';
 import 'sign_up_screen.dart';
 import 'forgot_password_screen.dart';
 import '../../services/auth_service.dart';
@@ -241,7 +241,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
             // Title
             const Text(
-              'Welcome Back',
+              'Chào mừng trở lại',
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 28,
@@ -253,7 +253,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
             // Description
             Text(
-              'Welcome to FastNews',
+              'Chào mừng bạn đến với Look At News',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
@@ -275,8 +275,8 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
             // Password Field
             CustomTextField(
-              label: 'Password',
-              hintText: 'Password',
+              label: 'Mật khẩu',
+              hintText: 'Mật khẩu',
               prefixIcon: Icons.lock_outline,
               isPassword: true,
               controller: _passwordController,
@@ -297,7 +297,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
                   );
                 },
                 child: const Text(
-                  'Forget Password?',
+                  'Quên mật khẩu?',
                   style: TextStyle(
                     color: Color(0xFFE20035),
                     fontSize: 14,
@@ -334,7 +334,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
                         ),
                       )
                     : const Text(
-                        'Sign In',
+                        'Đăng nhập',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -357,7 +357,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'or',
+                    'Hoặc',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
@@ -387,7 +387,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  'Don\'t have an account? ',
+                  'Bạn chưa có tài khoản? ',
                   style: TextStyle(
                     color: Color(0xFF8E8E93),
                     fontSize: 14,
@@ -403,7 +403,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
                     );
                   },
                   child: const Text(
-                    'Sign Up',
+                    'Đăng ký ngay',
                     style: TextStyle(
                       color: Color(0xFFE20035),
                       fontSize: 14,

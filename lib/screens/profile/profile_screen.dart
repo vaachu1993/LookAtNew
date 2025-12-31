@@ -5,7 +5,8 @@ import 'package:image/image.dart' as img;
 import '../../core/api_client.dart';
 import '../../core/image_picker_helper.dart';
 import '../../models/user.dart';
-import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Components/BottomNavigationBarComponent.dart';
+import '../../Utils/Utils.dart';
 import 'edit_name_dialog.dart';
 import 'change_password_screen.dart';
 
@@ -25,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    Utils.selectIndex = 4;
     _checkAuthAndLoadData();
   }
 
@@ -33,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final token = await _apiClient.authStorage.getAccessToken();
 
     if (token == null || token.isEmpty) {
-      // No token, redirect to login immediately
+      //Không có token thì không thể load dữ liệu
       if (!mounted) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -51,7 +53,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    // Token exists, proceed to load data
     _loadUserData();
   }
 
@@ -66,9 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _user = result.data!;
         });
       } else {
-        // Check if it's a session expiry (401 error)
         if (result.statusCode == 401) {
-          // Session expired, redirect to login
           if (mounted) {
             Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +82,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           return;
         }
 
-        // Other errors
         _showError(result.message ?? 'Không thể lấy thông tin user');
       }
     } catch (e) {
@@ -118,48 +116,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       debugPrint('🔄 Starting avatar update process...');
 
-      // Show picker and crop dialog
       final imageFile = await ImagePickerHelper.pickAndCropImage(context);
       debugPrint('📸 Image picker result: ${imageFile?.path}');
 
       if (imageFile == null) {
         debugPrint('❌ User cancelled image selection');
-        return; // User cancelled
+        return;
       }
 
       if (!mounted) return;
 
-      // Show loading dialog
       ImagePickerHelper.showLoadingDialog(context, message: 'Đang xử lý ảnh...');
-      debugPrint('⏳ Showing loading dialog');
+      debugPrint('Hiển thị dialog loading...');
 
       // Convert cropped image to base64 data URL
-      debugPrint('🔄 Converting image to base64...');
+      debugPrint('Chuyển ảnh đã cắt thành base64...');
       final avatarUrl = await _convertImageToBase64(imageFile.path);
-      debugPrint('✅ Image converted to base64, length: ${avatarUrl.length}');
 
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading dialog
-      debugPrint('✅ Closed loading dialog');
+      Navigator.of(context).pop();
 
-      // Update user with new avatar URL (username will be preserved)
-      debugPrint('🔄 Updating user with new avatar...');
+      debugPrint('Cập nhật avt mới');
       final updateResult = await _apiClient.updateUser(avatarUrl: avatarUrl);
       debugPrint('🔄 Update result: success=${updateResult.success}, message=${updateResult.message}');
 
       if (!mounted) return;
 
       if (updateResult.success) {
-        debugPrint('✅ Update successful, reloading user data...');
         await _loadUserData();
         _showSuccess('Cập nhật ảnh đại diện thành công');
-        debugPrint('🎉 Avatar update completed successfully');
+        debugPrint('Avatar update completed successfully');
       } else {
-        debugPrint('❌ Update failed: ${updateResult.message}');
+        debugPrint('Update failed: ${updateResult.message}');
         _showError(updateResult.message ?? 'Cập nhật thất bại');
       }
     } catch (e) {
-      debugPrint('💥 Exception in _updateAvatar: $e');
       if (mounted) {
         Navigator.of(context).pop(); // Close loading dialog if open
         _showError('Có lỗi xảy ra: ${e.toString()}');
@@ -670,9 +661,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildBottomNavBar() {
-    return CommonBottomNavBar(
-      currentIndex: 4, // Account tab active
-    );
+    return const BottomNavigationBarComponent();
   }
 
   Future<String> _convertImageToBase64(String filePath) async {

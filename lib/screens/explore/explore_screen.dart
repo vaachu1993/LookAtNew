@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Components/BottomNavigationBarComponent.dart';
+import '../../Utils/Utils.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -81,6 +82,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    Utils.selectIndex = 1; // Set current tab index
 
     // Initialize animation controller
     _animationController = AnimationController(
@@ -615,9 +617,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
   }
 
   Widget _buildBottomNavBar() {
-    return CommonBottomNavBar(
-      currentIndex: 1, // Explore tab active
-    );
+    return const BottomNavigationBarComponent();
   }
 }
 

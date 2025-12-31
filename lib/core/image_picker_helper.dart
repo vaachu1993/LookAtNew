@@ -7,7 +7,6 @@ import 'package:permission_handler/permission_handler.dart';
 class ImagePickerHelper {
   static final ImagePicker _picker = ImagePicker();
 
-  /// Show dialog to choose between camera and gallery
   static Future<File?> pickAndCropImage(BuildContext context) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -166,8 +165,6 @@ class ImagePickerHelper {
             toolbarWidgetColor: Colors.white,
             activeControlsWidgetColor: const Color(0xFFF9D47C),
 
-            // ❌ KHÔNG còn initAspectRatio
-            // ❌ KHÔNG còn CropAspectRatioPreset
             lockAspectRatio: true,
 
             hideBottomControls: false,
