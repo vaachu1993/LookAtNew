@@ -629,19 +629,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildHeader() {
     // Format current date
     final now = DateTime.now();
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    final months = ['January', 'February', 'March', 'April', 'May', 'June',
-                    'July', 'August', 'September', 'October', 'November', 'December'];
+    final days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'];
+    final months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+                    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
     final dayName = days[now.weekday - 1];
     final monthName = months[now.month - 1];
-    final dateString = '$dayName ${monthName} ${now.day}, ${now.year}';
+    final dateString = '$dayName, Ngày ${now.day} ${monthName} Năm ${now.year}';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Menu icon và Refresh icon
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -660,7 +659,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // Refresh button
               GestureDetector(
                 onTap: () {
-                  // Force refresh tất cả articles và categories
                   setState(() {
                     _currentCategory = 'all';
                   });
@@ -687,9 +685,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 24),
 
-          // Title
           const Text(
-            'Must you know today',
+            'Tin tức hôm nay',
             style: TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -700,7 +697,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 8),
 
-          // Date - dynamic
           Text(
             dateString,
             style: const TextStyle(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
-import 'widgets/custom_text_field.dart';
-import 'widgets/google_sign_in_button.dart';
+import '../../Components/CustomTextField.dart';
+import '../../Components/GoogleSignInButton.dart';
 import '../../services/auth_service.dart';
 import '../../services/google_signin_service.dart';
 

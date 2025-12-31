@@ -57,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
             // Headnews text
             const Text(
-              'LookAtMe',
+              'Look At News',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 32,
