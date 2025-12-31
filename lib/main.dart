@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:toastification/toastification.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/auth/email_sign_in_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
@@ -28,37 +29,39 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'LookAt',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE20035),
-          primary: const Color(0xFFE20035),
+    return ToastificationWrapper(
+      child: MaterialApp(
+        title: 'LookAt',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFE20035),
+            primary: const Color(0xFFE20035),
+          ),
+          fontFamily: 'SF Pro Text',
+          useMaterial3: true,
         ),
-        fontFamily: 'SF Pro Text',
-        useMaterial3: true,
-      ),
-      home: const SplashScreen(),
-      routes: {
-        '/login': (context) => const EmailSignInScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/profile': (context) => const ProfileScreen(),
-        '/explore': (context) => const ExploreScreen(),
-        '/bookmark': (context) => const BookmarkScreen(),
-        '/notifications': (context) => const NotificationsScreen(),
-      },
-      onGenerateRoute: (settings) {
-        if (settings.name == '/verify-email') {
-          final email = settings.arguments as String?;
-          if (email != null) {
-            return MaterialPageRoute(
-              builder: (context) => VerifyEmailScreen(email: email),
-            );
+        home: const SplashScreen(),
+        routes: {
+          '/login': (context) => const EmailSignInScreen(),
+          '/home': (context) => const HomeScreen(),
+          '/profile': (context) => const ProfileScreen(),
+          '/explore': (context) => const ExploreScreen(),
+          '/bookmark': (context) => const BookmarkScreen(),
+          '/notifications': (context) => const NotificationsScreen(),
+        },
+        onGenerateRoute: (settings) {
+          if (settings.name == '/verify-email') {
+            final email = settings.arguments as String?;
+            if (email != null) {
+              return MaterialPageRoute(
+                builder: (context) => VerifyEmailScreen(email: email),
+              );
+            }
           }
-        }
-        return null;
-      },
+          return null;
+        },
+      ),
     );
   }
 }

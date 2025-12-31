@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toastification/toastification.dart';
 import 'widgets/custom_text_field.dart';
 import 'widgets/google_sign_in_button.dart';
 import 'sign_up_screen.dart';
@@ -183,22 +184,46 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
+    toastification.show(
+      context: context,
+      type: ToastificationType.error,
+      style: ToastificationStyle.fillColored,
+      title: const Text('Lỗi'),
+      description: Text(message),
+      alignment: Alignment.bottomCenter,
+      autoCloseDuration: const Duration(seconds: 3),
+      icon: const Icon(Icons.error),
+      primaryColor: Colors.red,
+      backgroundColor: Colors.red,
+      foregroundColor: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      showProgressBar: true,
+      closeButtonShowType: CloseButtonShowType.onHover,
+      closeOnClick: false,
+      pauseOnHover: true,
+      dragToClose: true,
     );
   }
 
   void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
+    toastification.show(
+      context: context,
+      type: ToastificationType.success,
+      style: ToastificationStyle.fillColored,
+      title: const Text('Thành công'),
+      description: Text(message),
+      alignment: Alignment.bottomCenter,
+      autoCloseDuration: const Duration(seconds: 2),
+      icon: const Icon(Icons.check_circle),
+      primaryColor: Colors.green,
+      backgroundColor: Colors.green,
+      foregroundColor: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      showProgressBar: true,
+      closeButtonShowType: CloseButtonShowType.onHover,
+      closeOnClick: false,
+      pauseOnHover: true,
+      dragToClose: true,
     );
   }
 

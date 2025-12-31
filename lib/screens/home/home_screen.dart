@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../widgets/common_bottom_nav_bar.dart';
 import '../../models/article_model.dart';
 import '../../services/article_service.dart';
@@ -309,19 +310,147 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    // Tạo dummy articles cho skeleton
+    final dummyArticles = List.generate(
+      8,
+      (index) => ArticleModel(
+        id: 'dummy_$index',
+        title: 'Loading article title that spans multiple lines',
+        description: 'Loading article description',
+        thumbnail: '',
+        link: '',
+        source: 'Loading Source',
+        pubDate: DateTime.now(),
+        createdAt: DateTime.now(),
+        category: 'loading',
+      ),
+    );
+
+    return SafeArea(
+      bottom: false,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            color: Color(0xFFE20035),
+          // Dark top section (Header + Featured News)
+          Container(
+            color: const Color(0xFF0E0E12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 16),
+                // Category buttons skeleton
+                Skeletonizer(
+                  enabled: true,
+                  child: SizedBox(
+                    height: 42,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: 5,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: EdgeInsets.only(right: index < 4 ? 12 : 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1C1C1E),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              'Category',
+                              style: TextStyle(
+                                color: Color(0xFF8E8E93),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Featured news skeleton
+                Skeletonizer(
+                  enabled: true,
+                  child: SizedBox(
+                    height: 280,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: 3,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: EdgeInsets.only(right: index < 2 ? 16 : 0),
+                          child: _buildFeaturedNewsItem(dummyArticles[index]),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
-          SizedBox(height: 16),
-          Text(
-            'Loading feed...',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
+
+          // White bottom section (Recent Stories)
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  // Section header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Recent Stories',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Skeletonizer(
+                          enabled: true,
+                          child: Container(
+                            width: 60,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE20035),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Recent stories skeleton
+                  Expanded(
+                    child: Skeletonizer(
+                      enabled: true,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: 5,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: index < 4 ? 16 : 80,
+                            ),
+                            child: _buildRecentStoryItem(dummyArticles[index + 3]),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

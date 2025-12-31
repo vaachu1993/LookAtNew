@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toastification/toastification.dart';
 import 'widgets/custom_text_field.dart';
 import 'widgets/google_sign_in_button.dart';
 import '../../services/auth_service.dart';
@@ -105,21 +106,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
         throw Exception('Google ID Token rỗng. Vui lòng kiểm tra cấu hình.');
       }
 
-      print('✅ [SignUp] Got ID Token, calling backend...');
+      print('[SignUp] Got ID Token, calling backend...');
 
       // Gọi API backend (Google Sign-Up cũng dùng endpoint /google)
       final response = await _authService.loginWithGoogle(idToken);
 
       if (!mounted) return;
 
-      print('✅ [SignUp] Sign-up successful, navigating to HomeScreen...');
+      print('[SignUp] Sign-up successful, navigating to HomeScreen...');
 
       // Đăng ký thành công, chuyển sang HomeScreen (sẽ tự động fetch RSS)
       Navigator.of(context).pushReplacementNamed('/home');
 
       _showSuccess('Đăng ký Google thành công! Xin chào ${response.user.username}');
     } catch (e) {
-      print('❌ [SignUp] Error: $e');
+      print('[SignUp] Error: $e');
       if (!mounted) return;
 
       String errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -141,22 +142,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
+    toastification.show(
+      context: context,
+      type: ToastificationType.error,
+      style: ToastificationStyle.fillColored,
+      title: const Text('Lỗi'),
+      description: Text(message),
+      alignment: Alignment.bottomCenter,
+      autoCloseDuration: const Duration(seconds: 3),
+      icon: const Icon(Icons.error),
+      primaryColor: Colors.red,
+      backgroundColor: Colors.red,
+      foregroundColor: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      showProgressBar: true,
+      closeButtonShowType: CloseButtonShowType.onHover,
+      closeOnClick: false,
+      pauseOnHover: true,
+      dragToClose: true,
     );
   }
 
   void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
+    toastification.show(
+      context: context,
+      type: ToastificationType.success,
+      style: ToastificationStyle.fillColored,
+      title: const Text('Thành công'),
+      description: Text(message),
+      alignment: Alignment.bottomCenter,
+      autoCloseDuration: const Duration(seconds: 2),
+      icon: const Icon(Icons.check_circle),
+      primaryColor: Colors.green,
+      backgroundColor: Colors.green,
+      foregroundColor: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      showProgressBar: true,
+      closeButtonShowType: CloseButtonShowType.onHover,
+      closeOnClick: false,
+      pauseOnHover: true,
+      dragToClose: true,
     );
   }
 

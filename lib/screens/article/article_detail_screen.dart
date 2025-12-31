@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:toastification/toastification.dart';
 import '../../models/article_model.dart';
 import '../../models/favorite_model.dart';
 import '../../services/favorite_service.dart';
@@ -61,22 +62,36 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
               _article = _article.copyWith(isBookmarked: true);
             });
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(response.error ?? 'Failed to remove bookmark'),
-                  backgroundColor: Colors.red,
-                ),
+              toastification.show(
+                context: context,
+                type: ToastificationType.error,
+                style: ToastificationStyle.fillColored,
+                title: const Text('Lỗi'),
+                description: Text(response.error ?? 'Không thể xóa bookmark'),
+                alignment: Alignment.bottomCenter,
+                autoCloseDuration: const Duration(seconds: 2),
+                icon: const Icon(Icons.error_outline),
+                showProgressBar: false,
+                closeButtonShowType: CloseButtonShowType.none,
+                animationDuration: const Duration(milliseconds: 300),
               );
             }
           }
         } else {
           // Favorite not found, just update UI
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Bookmark not found'),
-                backgroundColor: Colors.orange,
-              ),
+            toastification.show(
+              context: context,
+              type: ToastificationType.warning,
+              style: ToastificationStyle.fillColored,
+              title: const Text('Cảnh báo'),
+              description: const Text('Không tìm thấy bookmark'),
+              alignment: Alignment.bottomCenter,
+              autoCloseDuration: const Duration(seconds: 2),
+              icon: const Icon(Icons.warning_outlined),
+              showProgressBar: false,
+              closeButtonShowType: CloseButtonShowType.none,
+              animationDuration: const Duration(milliseconds: 300),
             );
           }
         }
@@ -86,11 +101,18 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           _article = _article.copyWith(isBookmarked: true);
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(favoritesResponse.error ?? 'Failed to fetch bookmarks'),
-              backgroundColor: Colors.red,
-            ),
+          toastification.show(
+            context: context,
+            type: ToastificationType.error,
+            style: ToastificationStyle.fillColored,
+            title: const Text('Lỗi'),
+            description: Text(favoritesResponse.error ?? 'Không thể tải danh sách bookmark'),
+            alignment: Alignment.bottomCenter,
+            autoCloseDuration: const Duration(seconds: 2),
+            icon: const Icon(Icons.error_outline),
+            showProgressBar: false,
+            closeButtonShowType: CloseButtonShowType.none,
+            animationDuration: const Duration(milliseconds: 300),
           );
         }
       }
@@ -103,11 +125,35 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           _article = _article.copyWith(isBookmarked: false);
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.error ?? 'Failed to add bookmark'),
-              backgroundColor: Colors.red,
-            ),
+          toastification.show(
+            context: context,
+            type: ToastificationType.error,
+            style: ToastificationStyle.fillColored,
+            title: const Text('Lỗi'),
+            description: Text(response.error ?? 'Không thể lưu bookmark'),
+            alignment: Alignment.bottomCenter,
+            autoCloseDuration: const Duration(seconds: 2),
+            icon: const Icon(Icons.error_outline),
+            showProgressBar: false,
+            closeButtonShowType: CloseButtonShowType.none,
+            animationDuration: const Duration(milliseconds: 300),
+          );
+        }
+      } else {
+        // Show success notification
+        if (mounted) {
+          toastification.show(
+            context: context,
+            type: ToastificationType.success,
+            style: ToastificationStyle.fillColored,
+            title: const Text('Đã lưu'),
+            description: const Text('Bài báo đã được thêm vào Bookmark'),
+            alignment: Alignment.bottomCenter,
+            autoCloseDuration: const Duration(seconds: 2),
+            icon: const Icon(Icons.bookmark),
+            showProgressBar: false,
+            closeButtonShowType: CloseButtonShowType.none,
+            animationDuration: const Duration(milliseconds: 300),
           );
         }
       }
