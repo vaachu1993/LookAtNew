@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/notification_item.dart';
-import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Components/BottomNavigationBarComponent.dart';
 import '../../Utils/Utils.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -155,7 +155,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ],
       ),
-      bottomNavigationBar: const CommonBottomNavBar(),
+      bottomNavigationBar: const BottomNavigationBarComponent(),
     );
   }
 

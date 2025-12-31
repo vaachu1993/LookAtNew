@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../Utils/Utils.dart';
 import '../services/auth_service.dart';
 
-class CommonBottomNavBar extends StatelessWidget {
-  const CommonBottomNavBar({super.key});
+class BottomNavigationBarComponent extends StatelessWidget {
+  const BottomNavigationBarComponent({super.key});
 
   void _tabItemClick(int index) async {
     Utils.selectIndex = index;

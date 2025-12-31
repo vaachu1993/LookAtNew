@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Components/BottomNavigationBarComponent.dart';
 import '../../models/favorite_model.dart';
 import '../../models/article_model.dart';
 import '../../services/favorite_service.dart';
@@ -148,7 +148,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
               : _favorites.isEmpty
                   ? _buildEmptyState()
                   : _buildBookmarksList(),
-      bottomNavigationBar: const CommonBottomNavBar(),
+      bottomNavigationBar: const BottomNavigationBarComponent(),
     );
   }
 

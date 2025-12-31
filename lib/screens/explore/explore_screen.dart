@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Components/BottomNavigationBarComponent.dart';
 import '../../Utils/Utils.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -617,7 +617,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
   }
 
   Widget _buildBottomNavBar() {
-    return const CommonBottomNavBar();
+    return const BottomNavigationBarComponent();
   }
 }
 

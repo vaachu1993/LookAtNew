@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:skeletonizer/skeletonizer.dart';
-import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Components/BottomNavigationBarComponent.dart';
 import '../../models/article_model.dart';
 import '../../services/article_service.dart';
 import '../../services/favorite_service.dart';
@@ -1212,7 +1212,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildBottomNavBar() {
-    return const CommonBottomNavBar();
+    return const BottomNavigationBarComponent();
   }
 
   /// Build placeholder khi không có thumbnail

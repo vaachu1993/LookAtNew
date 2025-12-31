@@ -5,7 +5,7 @@ import 'package:image/image.dart' as img;
 import '../../core/api_client.dart';
 import '../../core/image_picker_helper.dart';
 import '../../models/user.dart';
-import '../../widgets/common_bottom_nav_bar.dart';
+import '../../Components/BottomNavigationBarComponent.dart';
 import '../../Utils/Utils.dart';
 import 'edit_name_dialog.dart';
 import 'change_password_screen.dart';
@@ -661,7 +661,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildBottomNavBar() {
-    return const CommonBottomNavBar();
+    return const BottomNavigationBarComponent();
   }
 
   Future<String> _convertImageToBase64(String filePath) async {
