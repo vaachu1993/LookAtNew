@@ -16,6 +16,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   final AuthService _authService = AuthService();
   final GoogleSignInService _googleSignInService = GoogleSignInService();
 
@@ -26,16 +27,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  // Xử lý đăng ký
   Future<void> _handleSignUp() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       _showError('Vui lòng nhập đầy đủ thông tin');
       return;
     }
@@ -45,10 +47,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    if (password != confirmPassword) {
+      _showError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      // Tạo avatar mặc định từ tên người dùng
       final defaultAvatar = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&size=200&background=random';
 
       final message = await _authService.registerUser(
@@ -59,11 +65,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (!mounted) return;
-
-      // Hiển thị thông báo thành công
       _showSuccess(message);
 
-      // Chờ 1 giây rồi chuyển sang màn hình verify email
+
       await Future.delayed(const Duration(seconds: 1));
 
       if (!mounted) return;
@@ -199,7 +203,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Title
               const Text(
-                'Create Account',
+                'Đăng ký tài khoản',
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: 28,
@@ -211,7 +215,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Description
               Text(
-                'Join FastNews today',
+                'Tham gia vào Look At News hôm nay',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,
@@ -223,8 +227,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Name Field
               CustomTextField(
-                label: 'Full Name',
-                hintText: 'Full Name',
+                label: 'Tên đầy đủ',
+                hintText: 'Tên đầy đủ',
                 prefixIcon: Icons.person_outline,
                 controller: _nameController,
               ),
@@ -243,11 +247,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Password Field
               CustomTextField(
-                label: 'Password',
-                hintText: 'Password',
+                label: 'Mật khẩu',
+                hintText: 'Mật khẩu',
                 prefixIcon: Icons.lock_outline,
                 isPassword: true,
                 controller: _passwordController,
+              ),
+
+              const SizedBox(height: 20),
+
+              // Confirm Password Field
+              CustomTextField(
+                label: 'Xác nhận mật khẩu',
+                hintText: 'Xác nhận mật khẩu',
+                prefixIcon: Icons.lock_outline,
+                isPassword: true,
+                controller: _confirmPasswordController,
               ),
 
               const SizedBox(height: 32),
@@ -277,7 +292,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         )
                       : const Text(
-                          'Sign Up',
+                          'Đăng ký',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -300,7 +315,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'or',
+                      'Hoặc',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 14,
@@ -330,7 +345,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    'Already have an account? ',
+                    'Bạn đã có tài khoản? ',
                     style: TextStyle(
                       color: Color(0xFF8E8E93),
                       fontSize: 14,
@@ -341,7 +356,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       Navigator.pop(context);
                     },
                     child: const Text(
-                      'Sign In',
+                      'Đăng nhập ngay',
                       style: TextStyle(
                         color: Color(0xFFE20035),
                         fontSize: 14,
