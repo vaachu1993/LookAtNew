@@ -162,7 +162,7 @@ class ArticleService {
   /// Fetch RSS mới từ nguồn rồi lấy tất cả articles
   ///
   /// Flow:
-  /// 1. POST /api/Rss/fetch (fetch RSS mới)
+  /// 1. POST /api/Rss/fetch (fetch từ TẤT CẢ RSS sources)
   /// 2. GET /api/Articles (lấy tất cả bài viết)
   ///
   /// Returns: ArticleResponseWithRssFetch
@@ -170,8 +170,8 @@ class ArticleService {
     String? category,
   }) async {
     try {
-      // Step 1: Fetch RSS từ nguồn
-      final rssResponse = await _rssService.fetchRss(category: category);
+      // Step 1: Fetch RSS từ TẤT CẢ nguồn (backend sẽ tự động fetch từ tất cả categories)
+      final rssResponse = await _rssService.fetchRss();
 
       if (!rssResponse.isSuccess) {
         // RSS fetch failed, try to get articles anyway

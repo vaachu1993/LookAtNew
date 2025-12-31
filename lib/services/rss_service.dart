@@ -13,12 +13,12 @@ class RssService {
   factory RssService() => _instance;
   RssService._internal();
 
-  /// Fetch RSS mới từ nguồn
+  /// Fetch RSS mới từ tất cả nguồn (all categories)
   /// POST /api/Rss/fetch
   ///
-  /// [category] - Category để fetch (optional)
+  /// Backend sẽ tự động fetch từ tất cả RSS sources trong tất cả categories
   /// Returns: RssFetchResponse
-  Future<RssFetchResponse> fetchRss({String? category}) async {
+  Future<RssFetchResponse> fetchRss() async {
     try {
       // Get token
       final token = await _authStorage.getAccessToken();
@@ -34,11 +34,8 @@ class RssService {
         'Authorization': 'Bearer $token',
       };
 
-      // Build URL
+      // Build URL - không cần category parameter nữa
       String url = '${Utils.baseUrl + Utils.rssFetchUrl}';
-      if (category != null && category != 'all') {
-        url += '?category=$category';
-      }
 
       // Make request
       final response = await http.post(
@@ -49,12 +46,22 @@ class RssService {
       // Handle response
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        final message = data['message'] as String? ?? 'RSS fetched successfully';
-        final count = data['count'] as int? ?? 0;
+
+        // Backend trả về: { added: number, details: [...] }
+        final added = data['added'] as int? ?? 0;
+        final details = data['details'] as List<dynamic>? ?? [];
+
+        // Tính tổng số articles từ details
+        int totalArticles = 0;
+        for (var detail in details) {
+          if (detail is Map<String, dynamic>) {
+            totalArticles += (detail['added'] as int? ?? 0);
+          }
+        }
 
         return RssFetchResponse.success(
-          message: message,
-          articlesCount: count,
+          message: 'Đã cập nhật $added nguồn RSS',
+          articlesCount: totalArticles > 0 ? totalArticles : added,
         );
       } else if (response.statusCode == 401) {
         return RssFetchResponse.error('Authentication failed. Please login again.');
@@ -66,11 +73,6 @@ class RssService {
     } catch (e) {
       return RssFetchResponse.error('Error fetching RSS: ${e.toString()}');
     }
-  }
-
-  /// Fetch RSS cho tất cả categories
-  Future<RssFetchResponse> fetchAllRss() async {
-    return fetchRss(category: 'all');
   }
 }
 

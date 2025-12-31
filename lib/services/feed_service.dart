@@ -153,7 +153,7 @@ class FeedService {
   ///
   /// Flow: POST /api/Rss/fetch → GET /api/feed
   ///
-  /// [category] - Category để fetch
+  /// [category] - Category để filter feed (backend sẽ fetch tất cả RSS sources)
   /// [silent] - true = không show progress, false = show progress
   ///
   /// Returns: FeedResponse with isNewDataFetched flag
@@ -162,8 +162,8 @@ class FeedService {
     bool silent = false,
   }) async {
     try {
-      // Step 1: Fetch RSS từ nguồn
-      final rssResponse = await _rssService.fetchRss(category: category);
+      // Step 1: Fetch RSS từ TẤT CẢ nguồn (backend sẽ tự động fetch từ tất cả categories)
+      final rssResponse = await _rssService.fetchRss();
 
       if (!rssResponse.isSuccess) {
         // RSS fetch failed, try to get cached feed
