@@ -10,9 +10,12 @@ class GoogleSignInButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+
     return Container(
       width: double.infinity,
-      height: 52,
+      height: height * 0.065,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
@@ -33,12 +36,12 @@ class GoogleSignInButton extends StatelessWidget {
               children: [
                 Image.asset(
                   'assets/images/google_logo.png',
-                  width: 24,
-                  height: 24,
+                  width: width * 0.06,
+                  height: width * 0.06,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
-                      width: 24,
-                      height: 24,
+                      width: width * 0.06,
+                      height: width * 0.06,
                       decoration: BoxDecoration(
                         color: Colors.grey[300],
                         shape: BoxShape.circle,

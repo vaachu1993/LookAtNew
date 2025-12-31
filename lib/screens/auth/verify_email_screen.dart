@@ -161,8 +161,80 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     );
   }
 
+  Widget _buildOTPBox(int index) {
+
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+
+    final hasFocus = _focusNodes[index].hasFocus;
+    final boxWidth = width * 0.12;
+    final boxHeight = height * 0.07;
+
+    return Container(
+      width: boxWidth,
+      height: boxHeight,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: hasFocus
+              ? const Color(0xFFE91E63) // Pink border when focused
+              : const Color(0xFFE0E0E0), // Light gray border
+          width: 2,
+        ),
+      ),
+      child: TextField(
+        controller: _otpControllers[index],
+        focusNode: _focusNodes[index],
+        textAlign: TextAlign.center,
+        keyboardType: TextInputType.number,
+        maxLength: 1,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: const InputDecoration(
+          counterText: '',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+        ),
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+        ],
+        onChanged: (value) {
+          if (value.isNotEmpty) {
+            // Move to next field
+            if (index < 5) {
+              _focusNodes[index + 1].requestFocus();
+            } else {
+              // Last field, unfocus and auto-verify
+              _focusNodes[index].unfocus();
+              _verifyOTP();
+            }
+          } else {
+            // Move to previous field when deleting
+            if (index > 0) {
+              _focusNodes[index - 1].requestFocus();
+            }
+          }
+          setState(() {}); // Rebuild to update border color
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    double width = MediaQuery
+        .of(context)
+        .size
+        .width;
+    double height = MediaQuery
+        .of(context)
+        .size
+        .height;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -208,7 +280,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(
                   6,
-                  (index) => _buildOTPBox(index),
+                      (index) => _buildOTPBox(index),
                 ),
               ),
 
@@ -266,64 +338,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// Build single OTP box
-  Widget _buildOTPBox(int index) {
-    final hasFocus = _focusNodes[index].hasFocus;
-
-    return Container(
-      width: 48,
-      height: 56,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: hasFocus
-              ? const Color(0xFFE91E63) // Pink border when focused
-              : const Color(0xFFE0E0E0), // Light gray border
-          width: 2,
-        ),
-      ),
-      child: TextField(
-        controller: _otpControllers[index],
-        focusNode: _focusNodes[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-        ),
-        decoration: const InputDecoration(
-          counterText: '',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-        ),
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-        ],
-        onChanged: (value) {
-          if (value.isNotEmpty) {
-            // Move to next field
-            if (index < 5) {
-              _focusNodes[index + 1].requestFocus();
-            } else {
-              // Last field, unfocus and auto-verify
-              _focusNodes[index].unfocus();
-              _verifyOTP();
-            }
-          } else {
-            // Move to previous field when deleting
-            if (index > 0) {
-              _focusNodes[index - 1].requestFocus();
-            }
-          }
-          setState(() {}); // Rebuild to update border color
-        },
       ),
     );
   }

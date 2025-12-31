@@ -131,6 +131,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
       appBar: AppBar(
@@ -149,8 +152,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       const SizedBox(height: 80),
                       // Success icon
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: width * 0.2,
+                        height: width * 0.2,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
@@ -189,7 +192,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       const SizedBox(height: 40),
                       // Button
                       SizedBox(
-                        height: 50,
+                        height: height * 0.063,
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.of(context).pushNamedAndRemoveUntil(
@@ -372,7 +375,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                       // Submit button
                       SizedBox(
-                        height: 50,
+                        height: height * 0.063,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleResetPassword,
                           style: ElevatedButton.styleFrom(
@@ -385,10 +388,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             disabledBackgroundColor: const Color(0xFF444444),
                           ),
                           child: _isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
+                              ? SizedBox(
+                                  height: width * 0.06,
+                                  width: width * 0.06,
+                                  child: const CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor:
                                         AlwaysStoppedAnimation<Color>(
