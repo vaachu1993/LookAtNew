@@ -26,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    Utils.selectIndex = 4;
+    Utils.selectIndex = 3;
     _checkAuthAndLoadData();
   }
 
@@ -496,24 +496,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Back button
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE20035),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: InkWell(
-              onTap: () => Navigator.of(context).pop(),
-              child: const Icon(
-                Icons.arrow_back,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
           // Title
           const Text(
             'Tài khoản',
@@ -622,25 +604,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.lock_outline,
               title: 'Đổi mật khẩu',
               onTap: _handleChangePassword,
-            ),
-
-            // Preferences section
-            _buildSectionHeader('Tùy chọn'),
-            _buildProfileItem(
-              icon: Icons.notifications_outlined,
-              title: 'Thông báo',
-              onTap: _showFeatureInDevelopment,
-            ),
-            _buildProfileItem(
-              icon: Icons.language_outlined,
-              title: 'Ngôn ngữ',
-              subtitle: 'Tiếng Việt',
-              onTap: _showFeatureInDevelopment,
-            ),
-            _buildProfileItem(
-              icon: Icons.privacy_tip_outlined,
-              title: 'Quyền riêng tư',
-              onTap: _showFeatureInDevelopment,
             ),
 
             // Danger zone

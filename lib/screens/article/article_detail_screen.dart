@@ -171,60 +171,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-  void _showMoreOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.open_in_browser),
-                title: const Text('Open in browser'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: Open in browser
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.content_copy),
-                title: const Text('Copy link'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: Copy to clipboard
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.report_outlined),
-                title: const Text('Report'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: Report article
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -247,10 +193,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.black),
             onPressed: _shareArticle,
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: _showMoreOptions,
           ),
         ],
       ),

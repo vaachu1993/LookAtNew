@@ -22,11 +22,7 @@ class BottomNavigationBarComponent extends StatelessWidget {
         Navigator.of(context).pushNamed('/bookmark');
         break;
 
-      case 3: // Notifications
-        Navigator.of(context).pushNamed('/notifications');
-        break;
-
-      case 4: // Account
+      case 3: // Account
         final authService = AuthService();
         final isLoggedIn = await authService.isLoggedIn();
 
@@ -78,27 +74,22 @@ class BottomNavigationBarComponent extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Trang chủ',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.explore_outlined),
             activeIcon: Icon(Icons.explore),
-            label: 'Explore',
+            label: 'Khám phá',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bookmark_border),
             activeIcon: Icon(Icons.bookmark),
-            label: 'Bookmark',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications),
-            label: 'Notifications',
+            label: 'Lưu trữ',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
-            label: 'Account',
+            label: 'Cá nhân',
           ),
         ],
       ),
