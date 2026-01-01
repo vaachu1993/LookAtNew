@@ -283,7 +283,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   List<ArticleModel> get _recentArticles {
-    return _articles.skip(3).toList();
+    // Lấy ngày hôm nay (chỉ ngày, không có giờ)
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Lọc các tin tức trong ngày hôm nay
+    return _articles.skip(3).where((article) {
+      final publishedDate = DateTime(
+        article.pubDate.year,
+        article.pubDate.month,
+        article.pubDate.day,
+      );
+      return publishedDate.isAtSameMomentAs(today);
+    }).toList();
   }
 
   @override
@@ -298,16 +310,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ? _buildEmptyState()
                   : _buildContent(),
       bottomNavigationBar: _buildBottomNavBar(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Handle FAB tap
-        },
-        backgroundColor: const Color(0xFFE20035),
-        child: const Icon(
-          Icons.edit,
-          color: Colors.white,
-        ),
-      ),
     );
   }
 
@@ -328,132 +330,168 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
 
+    double height = MediaQuery.of(context).size.height;
+
     return SafeArea(
       bottom: false,
-      child: Column(
+      child: Stack(
         children: [
-          // Dark top section (Header + Featured News)
-          Container(
-            color: const Color(0xFF0E0E12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 16),
-                // Category buttons skeleton
-                Skeletonizer(
-                  enabled: true,
-                  child: SizedBox(
-                    height: 42,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: 5,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: EdgeInsets.only(right: index < 4 ? 12 : 0),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1C1C1E),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Category',
-                              style: TextStyle(
-                                color: Color(0xFF8E8E93),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Featured news skeleton
-                Skeletonizer(
-                  enabled: true,
-                  child: SizedBox(
-                    height: 280,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: EdgeInsets.only(right: index < 2 ? 16 : 0),
-                          child: _buildFeaturedNewsItem(dummyArticles[index]),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-
-          // White bottom section (Recent Stories)
-          Expanded(
+          // Dark top section (Header + Featured News) - Background
+          SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
             child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-              ),
+              color: const Color(0xFF0E0E12),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
-                  // Section header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Recent Stories',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Skeletonizer(
-                          enabled: true,
-                          child: Container(
-                            width: 60,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE20035),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildHeader(),
                   const SizedBox(height: 16),
-                  // Recent stories skeleton
-                  Expanded(
-                    child: Skeletonizer(
-                      enabled: true,
+                  // Category buttons skeleton
+                  Skeletonizer(
+                    enabled: true,
+                    child: SizedBox(
+                      height: 42,
                       child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         itemCount: 5,
                         itemBuilder: (context, index) {
                           return Padding(
-                            padding: EdgeInsets.only(
-                              bottom: index < 4 ? 16 : 80,
+                            padding: EdgeInsets.only(right: index < 4 ? 12 : 0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1C1C1E),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'Category',
+                                style: TextStyle(
+                                  color: Color(0xFF8E8E93),
+                                  fontSize: 14,
+                                ),
+                              ),
                             ),
-                            child: _buildRecentStoryItem(dummyArticles[index + 3]),
                           );
                         },
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // Featured news skeleton
+                  Skeletonizer(
+                    enabled: true,
+                    child: SizedBox(
+                      height: 280,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: 3,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: EdgeInsets.only(right: index < 2 ? 16 : 0),
+                            child: _buildFeaturedNewsItem(dummyArticles[index]),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
+          ),
+
+          // White bottom section (Recent Stories) - DraggableScrollableSheet
+          DraggableScrollableSheet(
+            initialChildSize: 0.47,
+            minChildSize: 0.47,
+            maxChildSize: 0.9,
+            snap: true,
+            snapSizes: const [0.55, 0.9],
+            builder: (context, scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Drag handle indicator
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Section header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Tin tức gần đây',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Skeletonizer(
+                            enabled: true,
+                            child: Container(
+                              width: 60,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE20035),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Recent stories skeleton
+                    Expanded(
+                      child: Skeletonizer(
+                        enabled: true,
+                        child: ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: 5,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom: index < 4 ? 16 : 80,
+                              ),
+                              child: _buildRecentStoryItem(dummyArticles[index + 3]),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -595,30 +633,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       color: const Color(0xFFE20035),
       child: SafeArea(
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            // Dark top section (Header + Featured News) - Fixed height
-            Container(
-              color: const Color(0xFF0E0E12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 16),
-                  // Category buttons
-                  if (!_isCategoriesLoading && _categories.isNotEmpty)
-                    _buildCategoryButtons(),
-                  if (!_isCategoriesLoading && _categories.isNotEmpty)
+            // Dark top section (Header + Featured News) - Background
+            SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Container(
+                color: const Color(0xFF0E0E12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
                     const SizedBox(height: 16),
-                  if (_featuredArticles.isNotEmpty) _buildFeaturedNews(),
-                  const SizedBox(height: 20),
-                ],
+                    // Category buttons
+                    if (!_isCategoriesLoading && _categories.isNotEmpty)
+                      _buildCategoryButtons(),
+                    if (!_isCategoriesLoading && _categories.isNotEmpty)
+                      const SizedBox(height: 16),
+                    if (_featuredArticles.isNotEmpty) _buildFeaturedNews(),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
 
-            // White bottom section (Recent Stories) - Takes remaining space
-            Expanded(
-              child: _buildRecentStories(),
+            // White bottom section (Recent Stories) - DraggableScrollableSheet
+            DraggableScrollableSheet(
+              initialChildSize: 0.47, // Bắt đầu ở 35% màn hình (thấp hơn)
+              minChildSize: 0.47, // Tối thiểu 35% (cố định ở vị trí này khi kéo xuống)
+              maxChildSize: 0.9, // Tối đa 90%
+              snap: true,
+              snapSizes: const [0.47, 0.9], // Các vị trí snap
+              builder: (context, scrollController) {
+                return _buildRecentStories(scrollController);
+              },
             ),
           ],
         ),
@@ -641,49 +689,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE20035),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.menu,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              // Refresh button
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _currentCategory = 'all';
-                  });
-                  _loadArticles(fetchRss: true);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1C1C1E),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFF3A3A3C),
-                      width: 1,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.refresh,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
 
           const Text(
             'Tin tức hôm nay',
@@ -952,14 +957,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildRecentStories() {
+  Widget _buildRecentStories(ScrollController scrollController) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          const SizedBox(height: 20),
+          // Drag handle indicator
+          const SizedBox(height: 8),
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
 
           // Section header
           Padding(
@@ -968,7 +996,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Recent Stories',
+                  'Tin tức gần đây',
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: 18,
@@ -980,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     // Handle view all tap
                   },
                   child: const Text(
-                    'View all',
+                    'Xem tất cả',
                     style: TextStyle(
                       color: Color(0xFFE20035),
                       fontSize: 13,
@@ -996,16 +1024,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // Recent stories list - scrollable
           Expanded(
             child: _recentArticles.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No recent stories available',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                      ),
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.article_outlined,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Chưa có tin tức mới trong ngày',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Kéo xuống để làm mới',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   )
                 : ListView.builder(
+                    controller: scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: _recentArticles.length,
                     itemBuilder: (context, index) {

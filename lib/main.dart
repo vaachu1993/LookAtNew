@@ -8,7 +8,6 @@ import 'screens/home/home_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/explore/explore_screen.dart';
 import 'screens/bookmark/bookmark_screen.dart';
-import 'screens/notifications/notifications_screen.dart';
 import 'Utils/Utils.dart';
 
 void main() async {
@@ -49,7 +48,6 @@ class MyApp extends StatelessWidget {
           '/profile': (context) => const ProfileScreen(),
           '/explore': (context) => const ExploreScreen(),
           '/bookmark': (context) => const BookmarkScreen(),
-          '/notifications': (context) => const NotificationsScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/verify-email') {

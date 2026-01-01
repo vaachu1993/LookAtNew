@@ -229,6 +229,9 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -312,7 +315,7 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
             // Sign In Button
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: height * 0.065,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleSignIn,
                 style: ElevatedButton.styleFrom(
@@ -325,10 +328,10 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
                   disabledBackgroundColor: Colors.grey,
                 ),
                 child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
+                    ? SizedBox(
+                        width: width * 0.05,
+                        height: width * 0.05,
+                        child: const CircularProgressIndicator(
                           color: Colors.white,
                           strokeWidth: 2,
                         ),

@@ -193,6 +193,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E12),
       appBar: AppBar(
@@ -369,7 +372,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         // Submit button
                         SizedBox(
                           width: double.infinity,
-                          height: 56,
+                          height: height * 0.07,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _handleChangePassword,
                             style: ElevatedButton.styleFrom(
@@ -382,10 +385,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                               elevation: 0,
                             ),
                             child: _isLoading
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
+                                ? SizedBox(
+                                    width: width * 0.06,
+                                    height: width * 0.06,
+                                    child: const CircularProgressIndicator(
                                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                       strokeWidth: 2,
                                     ),

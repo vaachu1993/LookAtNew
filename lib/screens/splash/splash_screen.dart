@@ -32,6 +32,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFFE20035), // Brand red color
       body: Center(
@@ -53,7 +55,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            SizedBox(height: height * 0.03),
 
             // Headnews text
             const Text(
