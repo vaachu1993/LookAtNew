@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../Components/BottomNavigationBarComponent.dart';
 import '../../Utils/Utils.dart';
+import '../../models/article_model.dart';
+import '../../services/article_service.dart';
+import '../../services/category_service.dart';
+import '../article/article_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -10,6 +14,9 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProviderStateMixin {
+  final ArticleService _articleService = ArticleService();
+  final CategoryService _categoryService = CategoryService();
+
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   bool _isSearching = false;
@@ -17,67 +24,19 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
   late Animation<Color?> _backgroundColorAnimation;
   late Animation<Color?> _borderColorAnimation;
 
-  // Recent search data
-  final List<String> _recentSearches = ['politics', 'policy', 'critism'];
+  // Article data
+  List<ArticleModel> _allArticles = [];
+  List<ArticleModel> _filteredArticles = [];
+  List<ArticleModel> _searchResults = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  // Trending news data
-  final List<Map<String, dynamic>> _trendingNews = [
-    {
-      'rank': '01',
-      'source': 'CNN News',
-      'sourceIcon': Icons.circle,
-      'title': 'New Breakthrough in Quantum Computing Promises Unprecedented...',
-      'timeAgo': '1 day ago',
-      'readTime': '4 min read',
-    },
-    {
-      'rank': '02',
-      'source': 'CNBC News',
-      'sourceIcon': Icons.circle,
-      'title': 'Study Suggests Link Between Gut Microbiome and Mental Health Diso...',
-      'timeAgo': '1 day ago',
-      'readTime': '4 min read',
-    },
-    {
-      'rank': '03',
-      'source': 'FOX News',
-      'sourceIcon': Icons.circle,
-      'title': 'Global Markets React to Central Bank\'s Interest Rate Decision',
-      'timeAgo': '1 day ago',
-      'readTime': '4 min read',
-    },
-  ];
+  // Categories
+  List<String> _categories = [];
+  String _currentCategory = 'all';
 
-  // Search results data
-  final List<Map<String, dynamic>> _searchResults = [
-    {
-      'source': 'FOX News',
-      'sourceIcon': Icons.circle,
-      'title': 'Geopolitical Tensions Escalate as Ukra[ine-Russia...',
-      'highlight': 'Ukra',
-      'timeAgo': '1 day ago',
-      'readTime': '4 min read',
-      'thumbnail': 'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=200&h=150&fit=crop',
-    },
-    {
-      'source': 'FOX News',
-      'sourceIcon': Icons.circle,
-      'title': 'Ukra[ine Implements Economic Reforms to Stren...',
-      'highlight': 'Ukra',
-      'timeAgo': '1 day ago',
-      'readTime': '4 min read',
-      'thumbnail': 'https://images.unsplash.com/photo-1523995462485-3d171b5c8fa9?w=200&h=150&fit=crop',
-    },
-    {
-      'source': 'FOX News',
-      'sourceIcon': Icons.circle,
-      'title': 'Geopolitical Tensions Escalate as Ukra[ine-Russia...',
-      'highlight': 'Ukra',
-      'timeAgo': '1 day ago',
-      'readTime': '4 min read',
-      'thumbnail': 'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=200&h=150&fit=crop',
-    },
-  ];
+  // Recent search data (stored locally)
+  final List<String> _recentSearches = [];
 
   @override
   void initState() {
@@ -118,8 +77,11 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
 
     // Listen to text changes
     _searchController.addListener(() {
-      setState(() {});
+      _performSearch(_searchController.text);
     });
+
+    // Load articles
+    _loadArticles();
   }
 
   @override
@@ -130,11 +92,117 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
     super.dispose();
   }
 
+  /// Load all articles from API
+  Future<void> _loadArticles() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final response = await _articleService.getAllArticles();
+
+    if (response.isSuccess && response.articles != null && response.articles!.isNotEmpty) {
+      // Sort by pubDate (newest first)
+      final sortedArticles = List<ArticleModel>.from(response.articles!);
+      sortedArticles.sort((a, b) => b.pubDate.compareTo(a.pubDate));
+
+      setState(() {
+        _allArticles = sortedArticles;
+        _filteredArticles = sortedArticles;
+        _isLoading = false;
+      });
+
+      // Extract categories from articles
+      _updateCategoriesFromArticles();
+    } else {
+      setState(() {
+        _errorMessage = response.error ?? 'Không thể tải bài viết';
+        _isLoading = false;
+      });
+    }
+  }
+
+  /// Update categories from articles
+  void _updateCategoriesFromArticles() {
+    if (_allArticles.isNotEmpty) {
+      final extractedCategories = _categoryService.extractCategoriesFromArticles(_allArticles);
+      if (extractedCategories.isNotEmpty) {
+        setState(() {
+          _categories = extractedCategories;
+        });
+      }
+    }
+  }
+
+  /// Handle category selection
+  void _onCategorySelected(String category) {
+    if (_currentCategory == category) return;
+
+    setState(() {
+      _currentCategory = category;
+    });
+
+    _filterArticlesByCategory();
+  }
+
+  /// Filter articles by category
+  void _filterArticlesByCategory() {
+    setState(() {
+      if (_currentCategory == 'all') {
+        _filteredArticles = List.from(_allArticles);
+      } else {
+        _filteredArticles = _allArticles.where((article) =>
+          article.category.toLowerCase() == _currentCategory.toLowerCase()
+        ).toList();
+      }
+    });
+  }
+
+  /// Perform search on articles
+  void _performSearch(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _searchResults = [];
+      } else {
+        final lowerQuery = query.toLowerCase();
+        _searchResults = _allArticles.where((article) {
+          final titleMatch = article.title.toLowerCase().contains(lowerQuery);
+
+          return titleMatch;
+        }).toList();
+
+        // Sort search results by relevance (title matches first)
+        _searchResults.sort((a, b) {
+          final aTitle = a.title.toLowerCase().contains(lowerQuery);
+          final bTitle = b.title.toLowerCase().contains(lowerQuery);
+
+          if (aTitle && !bTitle) return -1;
+          if (!aTitle && bTitle) return 1;
+
+          // If both or neither match title, sort by date
+          return b.pubDate.compareTo(a.pubDate);
+        });
+      }
+    });
+  }
+
   void _clearSearch() {
+    // Add to recent searches if there was text
+    if (_searchController.text.isNotEmpty && !_recentSearches.contains(_searchController.text)) {
+      setState(() {
+        _recentSearches.insert(0, _searchController.text);
+        // Keep only last 10 searches
+        if (_recentSearches.length > 10) {
+          _recentSearches.removeLast();
+        }
+      });
+    }
+
     _searchController.clear();
     _searchFocusNode.unfocus();
     setState(() {
       _isSearching = false;
+      _searchResults = [];
     });
   }
 
@@ -162,26 +230,66 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
 
             // Content section
             Expanded(
-              child: _isSearching || _searchController.text.isNotEmpty
-                  ? _buildSearchResults()
-                  : _buildIdleContent(),
+              child: _isLoading
+                  ? _buildLoadingState()
+                  : _errorMessage != null
+                      ? _buildErrorState()
+                      : (_isSearching || _searchController.text.isNotEmpty)
+                          ? _buildSearchResults()
+                          : _buildIdleContent(),
             ),
           ],
         ),
       ),
-      floatingActionButton: !_isSearching && _searchController.text.isEmpty
-          ? FloatingActionButton(
-              onPressed: () {
-                // Handle FAB action
-              },
-              backgroundColor: const Color(0xFFE20035),
-              child: const Icon(
-                Icons.edit,
-                color: Colors.white,
-              ),
-            )
-          : null,
       bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: CircularProgressIndicator(
+        color: Color(0xFFE20035),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Color(0xFFE20035),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage ?? 'Đã có lỗi xảy ra',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadArticles,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE20035),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -204,7 +312,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
               controller: _searchController,
               focusNode: _searchFocusNode,
               decoration: InputDecoration(
-                hintText: 'Search',
+                hintText: 'Tìm kiếm theo tiêu đề',
                 hintStyle: const TextStyle(
                   color: Color(0xFF8E8E93),
                   fontSize: 16,
@@ -236,52 +344,18 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
   }
 
   Widget _buildIdleContent() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Recent Search Section
-          if (_recentSearches.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Recent Search',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _clearAllRecentSearches,
-                    child: const Text(
-                      'Clear all',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFFE20035),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildRecentSearchChips(),
-            const SizedBox(height: 24),
-          ],
-
-          // Trending on Headnews Section
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Recent Search Section
+        if (_recentSearches.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Trending on Headnews',
+                  'Tìm kiếm gần đây',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -289,11 +363,9 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {
-                    // Handle view all
-                  },
+                  onTap: _clearAllRecentSearches,
                   child: const Text(
-                    'View all',
+                    'Xóa tất cả',
                     style: TextStyle(
                       fontSize: 14,
                       color: Color(0xFFE20035),
@@ -304,11 +376,146 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          _buildRecentSearchChips(),
           const SizedBox(height: 16),
-          _buildTrendingList(),
         ],
+
+        // Category buttons
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.0),
+          child: Text(
+            'Danh mục',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildCategoryButtons(),
+        const SizedBox(height: 16),
+
+        // Articles list
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _currentCategory == 'all'
+                    ? 'All Articles'
+                    : _getCategoryLabel(_currentCategory),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              Text(
+                '${_filteredArticles.length} articles',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF8E8E93),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Articles list
+        Expanded(
+          child: _filteredArticles.isEmpty
+              ? Center(
+                  child: Text(
+                    'No articles found',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _filteredArticles.length,
+                  itemBuilder: (context, index) {
+                    final article = _filteredArticles[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildArticleItem(article),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryButtons() {
+    // Thêm "Tất cả" vào đầu danh sách
+    final allCategories = ['all', ..._categories];
+
+    return SizedBox(
+      height: 42,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: allCategories.length,
+        itemBuilder: (context, index) {
+          final category = allCategories[index];
+          final isSelected = _currentCategory == category;
+
+          return Padding(
+            padding: EdgeInsets.only(right: index < allCategories.length - 1 ? 12 : 0),
+            child: _buildCategoryButton(
+              label: _getCategoryLabel(category),
+              isSelected: isSelected,
+              onTap: () => _onCategorySelected(category),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  Widget _buildCategoryButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE20035) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFE20035) : const Color(0xFFE0E0E0),
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFF8E8E93),
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getCategoryLabel(String category) {
+    if (category == 'all') return 'Tất cả';
+
+    // Viết hoa chữ cái đầu
+    return category[0].toUpperCase() + category.substring(1);
   }
 
   Widget _buildRecentSearchChips() {
@@ -353,245 +560,380 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildTrendingList() {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _trendingNews.length,
-      itemBuilder: (context, index) {
-        final news = _trendingNews[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: _buildTrendingItem(news),
+  Widget _buildArticleItem(ArticleModel article) {
+    return GestureDetector(
+      onTap: () async {
+        final updatedArticle = await Navigator.push<ArticleModel>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(article: article),
+          ),
         );
+
+        // Update article state if bookmark changed
+        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+          setState(() {
+            final index = _filteredArticles.indexWhere((a) => a.id == updatedArticle.id);
+            if (index != -1) {
+              _filteredArticles[index] = updatedArticle;
+            }
+            final allIndex = _allArticles.indexWhere((a) => a.id == updatedArticle.id);
+            if (allIndex != -1) {
+              _allArticles[allIndex] = updatedArticle;
+            }
+            final searchIndex = _searchResults.indexWhere((a) => a.id == updatedArticle.id);
+            if (searchIndex != -1) {
+              _searchResults[searchIndex] = updatedArticle;
+            }
+          });
+        }
       },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Thumbnail
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 90,
+              height: 90,
+              color: Colors.grey[300],
+              child: article.thumbnail.isNotEmpty
+                  ? Image.network(
+                      article.thumbnail,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Icon(
+                            Icons.image,
+                            color: Colors.grey,
+                            size: 30,
+                          ),
+                        );
+                      },
+                    )
+                  : const Icon(
+                      Icons.image,
+                      color: Colors.grey,
+                      size: 30,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Source
+                Row(
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE20035),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.newspaper,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        article.source,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8E8E93),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Title
+                Text(
+                  article.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Meta info
+                Row(
+                  children: [
+                    Text(
+                      _formatTimeAgo(article.pubDate),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '•',
+                      style: TextStyle(
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _getCategoryLabel(article.category),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildTrendingItem(Map<String, dynamic> news) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Rank number
-        SizedBox(
-          width: 40,
-          child: Text(
-            news['rank'],
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.withValues(alpha: 0.3),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
 
-        // Content
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Source with icon
-              Row(
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE20035),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      news['sourceIcon'],
-                      size: 12,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    news['source'],
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF8E8E93),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Title
-              Text(
-                news['title'],
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Meta info
-              Row(
-                children: [
-                  Text(
-                    news['timeAgo'],
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    '•',
-                    style: TextStyle(
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    news['readTime'],
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   Widget _buildSearchResults() {
+    if (_searchResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Không tìm thấy kết quả cho "${_searchController.text}"',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
-        final result = _searchResults[index];
+        final article = _searchResults[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
-          child: _buildSearchResultItem(result),
+          child: _buildSearchResultItem(article),
         );
       },
     );
   }
 
-  Widget _buildSearchResultItem(Map<String, dynamic> result) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Content
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Source with icon
-              Row(
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF0066CC),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      result['sourceIcon'],
-                      size: 12,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    result['source'],
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF8E8E93),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(
-                    Icons.more_vert,
-                    color: Color(0xFF8E8E93),
-                    size: 20,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Title with highlight
-              _buildHighlightedTitle(result['title'], result['highlight']),
-              const SizedBox(height: 8),
-
-              // Meta info
-              Row(
-                children: [
-                  Text(
-                    result['timeAgo'],
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    '•',
-                    style: TextStyle(
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    result['readTime'],
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+  Widget _buildSearchResultItem(ArticleModel article) {
+    return GestureDetector(
+      onTap: () async {
+        final updatedArticle = await Navigator.push<ArticleModel>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(article: article),
           ),
-        ),
-        const SizedBox(width: 12),
+        );
 
-        // Thumbnail
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: 90,
-            height: 90,
-            color: Colors.grey[300],
-            child: Image.network(
-              result['thumbnail'],
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.image,
-                    color: Colors.grey,
-                    size: 30,
-                  ),
-                );
-              },
+        // Update article state if bookmark changed
+        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+          setState(() {
+            final index = _filteredArticles.indexWhere((a) => a.id == updatedArticle.id);
+            if (index != -1) {
+              _filteredArticles[index] = updatedArticle;
+            }
+            final allIndex = _allArticles.indexWhere((a) => a.id == updatedArticle.id);
+            if (allIndex != -1) {
+              _allArticles[allIndex] = updatedArticle;
+            }
+            final searchIndex = _searchResults.indexWhere((a) => a.id == updatedArticle.id);
+            if (searchIndex != -1) {
+              _searchResults[searchIndex] = updatedArticle;
+            }
+          });
+        }
+      },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Source with icon
+                Row(
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF0066CC),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.newspaper,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        article.source,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8E8E93),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Title with highlight
+                _buildHighlightedText(article.title, _searchController.text),
+                const SizedBox(height: 8),
+
+                // Meta info
+                Row(
+                  children: [
+                    Text(
+                      _formatTimeAgo(article.pubDate),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '•',
+                      style: TextStyle(
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _getCategoryLabel(article.category),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+
+          // Thumbnail
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 90,
+              height: 90,
+              color: Colors.grey[300],
+              child: article.thumbnail.isNotEmpty
+                  ? Image.network(
+                      article.thumbnail,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Icon(
+                            Icons.image,
+                            color: Colors.grey,
+                            size: 30,
+                          ),
+                        );
+                      },
+                    )
+                  : const Icon(
+                      Icons.image,
+                      color: Colors.grey,
+                      size: 30,
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildHighlightedTitle(String title, String highlight) {
-    final parts = title.split(highlight);
+  Widget _buildHighlightedText(String text, String query) {
+    if (query.isEmpty) {
+      return Text(
+        text,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.black,
+          height: 1.3,
+        ),
+      );
+    }
+
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+    final index = lowerText.indexOf(lowerQuery);
+
+    if (index == -1) {
+      return Text(
+        text,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.black,
+          height: 1.3,
+        ),
+      );
+    }
+
     return RichText(
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
@@ -603,14 +945,16 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
           height: 1.3,
         ),
         children: [
-          TextSpan(text: parts[0]),
+          if (index > 0) TextSpan(text: text.substring(0, index)),
           TextSpan(
-            text: highlight,
+            text: text.substring(index, index + query.length),
             style: const TextStyle(
               color: Color(0xFFE20035),
+              backgroundColor: Color(0xFFFFE8EC),
             ),
           ),
-          if (parts.length > 1) TextSpan(text: parts[1]),
+          if (index + query.length < text.length)
+            TextSpan(text: text.substring(index + query.length)),
         ],
       ),
     );
