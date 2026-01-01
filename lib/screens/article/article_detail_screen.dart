@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:toastification/toastification.dart';
+import 'package:flutter_html/flutter_html.dart';
 import '../../models/article_model.dart';
 import '../../models/favorite_model.dart';
 import '../../services/favorite_service.dart';
+import '../../services/article_content_service.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final ArticleModel article;
@@ -19,13 +21,46 @@ class ArticleDetailScreen extends StatefulWidget {
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   final FavoriteService _favoriteService = FavoriteService();
+  final ArticleContentService _contentService = ArticleContentService();
   late ArticleModel _article;
   bool _isTogglingFavorite = false;
+  bool _isLoadingContent = true;
+  String? _articleHtmlContent;
+  String? _contentError;
 
   @override
   void initState() {
     super.initState();
     _article = widget.article;
+    _fetchArticleContent();
+  }
+
+  Future<void> _fetchArticleContent() async {
+    print('🚀 Starting fetch for article: ${_article.title}');
+    print('🔗 Link: ${_article.link}');
+
+    setState(() {
+      _isLoadingContent = true;
+      _contentError = null;
+    });
+
+    final response = await _contentService.fetchArticleContent(_article.link);
+
+    print('📥 Response received - Success: ${response.isSuccess}');
+    if (response.isSuccess) {
+      print('✅ Content length: ${response.content?.length ?? 0}');
+    } else {
+      print('❌ Error: ${response.error}');
+    }
+
+    setState(() {
+      _isLoadingContent = false;
+      if (response.isSuccess) {
+        _articleHtmlContent = response.content;
+      } else {
+        _contentError = response.error;
+      }
+    });
   }
 
   Future<void> _toggleBookmark() async {
@@ -48,11 +83,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       if (favoritesResponse.isSuccess && favoritesResponse.favorites != null) {
         final favorite = favoritesResponse.favorites!
             .firstWhere((f) => f.articleId == _article.id, orElse: () => FavoriteModel(
-              id: '',
-              articleId: '',
-              userId: '',
-              createdAt: DateTime.now(),
-            ));
+          id: '',
+          articleId: '',
+          userId: '',
+          createdAt: DateTime.now(),
+        ));
 
         if (favorite.id.isNotEmpty) {
           final response = await _favoriteService.removeFavorite(favorite.id);
@@ -203,32 +238,33 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             // Hero Image
             _buildHeroImage(),
 
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  _buildTitle(),
-                  const SizedBox(height: 20),
-
-                  // Source Section
-                  _buildSourceSection(),
-                  const SizedBox(height: 24),
-
-                  // Divider
-                  Divider(
-                    color: Colors.grey[300],
-                    thickness: 1,
+            // Content - BỎ PADDING Ở ĐÂY
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title, Source - VẪN CÓ PADDING
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitle(),
+                      const SizedBox(height: 20),
+                      _buildSourceSection(),
+                      const SizedBox(height: 24),
+                      Divider(
+                        color: Colors.grey[300],
+                        thickness: 1,
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
-                  const SizedBox(height: 24),
+                ),
 
-                  // Body Content
-                  _buildBodyContent(),
-                  const SizedBox(height: 40),
-                ],
-              ),
+                // Body Content - KHÔNG PADDING để ảnh full width
+                _buildBodyContent(),
+                const SizedBox(height: 40),
+              ],
             ),
           ],
         ),
@@ -280,7 +316,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             child: CircularProgressIndicator(
               value: loadingProgress.expectedTotalBytes != null
                   ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
+                  loadingProgress.expectedTotalBytes!
                   : null,
               color: const Color(0xFFE20035),
             ),
@@ -432,6 +468,383 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   }
 
   Widget _buildBodyContent() {
+    // Show loading state
+    if (_isLoadingContent) {
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              children: [
+                const CircularProgressIndicator(
+                  color: Color(0xFFE20035),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Đang tải nội dung bài báo...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Show error state with fallback to description
+    if (_contentError != null) {
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Error message
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.orange[700],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Không thể tải nội dung đầy đủ',
+                          style: TextStyle(
+                            color: Colors.orange[700],
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _contentError!,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: _fetchArticleContent,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Thử lại'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Show description as fallback
+            Text(
+              'Hiển thị mô tả từ RSS:',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Fallback to description
+            _buildDescriptionContent(),
+          ],
+        ),
+      );
+    }
+
+    // Show HTML content
+    if (_articleHtmlContent != null) {
+      try {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Html(
+              data: _articleHtmlContent!,
+              extensions: [
+                TagExtension(
+                  tagsToExtend: {"img"},
+                  builder: (extensionContext) {
+                    final element = extensionContext.element;
+                    final src = element?.attributes['src'];
+
+                    if (src == null || src.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    // Check if img is inside figure (will be handled by figure extension)
+                    final parent = element?.parent;
+                    if (parent?.localName == 'figure') {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 16),
+                      width: double.infinity,
+                      child: Image.network(
+                        src,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 200,
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 48,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 200,
+                            color: Colors.grey[100],
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                    : null,
+                                color: const Color(0xFFE20035),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+                TagExtension(
+                  tagsToExtend: {"figure"},
+                  builder: (extensionContext) {
+                    final element = extensionContext.element;
+
+                    // Find img tag
+                    final imgElement = element?.querySelector('img');
+                    final imgSrc = imgElement?.attributes['src'];
+
+                    // Find caption
+                    final captionElement = element?.querySelector('figcaption');
+                    final captionText = captionElement?.text ?? '';
+
+                    if (imgSrc == null || imgSrc.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 16),
+                      width: double.infinity,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Image.network(
+                            imgSrc,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 200,
+                                color: Colors.grey[200],
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                height: 200,
+                                color: Colors.grey[100],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    color: const Color(0xFFE20035),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          if (captionText.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                              child: Text(
+                                captionText,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+              style: {
+                "body": Style(
+                  margin: Margins.zero,
+                  padding: HtmlPaddings.all(20),
+                  fontSize: FontSize(16),
+                  lineHeight: const LineHeight(1.7),
+                  color: Colors.black87,
+                ),
+                "p": Style(
+                  margin: Margins.only(bottom: 16),
+                  textAlign: TextAlign.justify,
+                ),
+                "h1": Style(
+                  fontSize: FontSize(24),
+                  fontWeight: FontWeight.bold,
+                  margin: Margins.only(top: 24, bottom: 16),
+                  color: Colors.black,
+                ),
+                "h2": Style(
+                  fontSize: FontSize(22),
+                  fontWeight: FontWeight.bold,
+                  margin: Margins.only(top: 20, bottom: 14),
+                  color: Colors.black,
+                ),
+                "h3": Style(
+                  fontSize: FontSize(20),
+                  fontWeight: FontWeight.bold,
+                  margin: Margins.only(top: 18, bottom: 12),
+                  color: Colors.black,
+                ),
+                "h4": Style(
+                  fontSize: FontSize(18),
+                  fontWeight: FontWeight.bold,
+                  margin: Margins.only(top: 16, bottom: 10),
+                  color: Colors.black,
+                ),
+                "table": Style(
+                  width: Width(double.infinity),
+                  margin: Margins.symmetric(vertical: 16),
+                ),
+                "blockquote": Style(
+                  border: Border(
+                    left: BorderSide(
+                      color: const Color(0xFFE20035),
+                      width: 4,
+                    ),
+                  ),
+                  margin: Margins.symmetric(vertical: 16),
+                  padding: HtmlPaddings.only(left: 16, right: 0, top: 8, bottom: 8),
+                  backgroundColor: Colors.grey.withValues(alpha: 0.05),
+                ),
+                "ul": Style(
+                  margin: Margins.only(bottom: 16),
+                  padding: HtmlPaddings.only(left: 20),
+                ),
+                "ol": Style(
+                  margin: Margins.only(bottom: 16),
+                  padding: HtmlPaddings.only(left: 20),
+                ),
+                "li": Style(
+                  margin: Margins.only(bottom: 8),
+                ),
+                "a": Style(
+                  color: const Color(0xFF007AFF),
+                  textDecoration: TextDecoration.underline,
+                ),
+                "iframe": Style(
+                  display: Display.none,
+                ),
+              },
+            ),
+          ],
+        );
+      } catch (e) {
+        print('❌ Error rendering HTML: $e');
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.red.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Lỗi hiển thị HTML. Hiển thị mô tả thay thế.',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildDescriptionContent(),
+            ],
+          ),
+        );
+      }
+    }
+
+    // Fallback to description if no HTML content
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: _buildDescriptionContent(),
+    );
+  }
+
+  Widget _buildDescriptionContent() {
     // Clean description - remove HTML tags if any
     String cleanText = _article.description
         .replaceAll(RegExp(r'<[^>]*>'), '')
@@ -440,15 +853,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         .replaceAll('&lt;', '<')
         .replaceAll('&gt;', '>')
         .replaceAll('&quot;', '"')
-        .replaceAll(RegExp(r'\s+'), ' ') // Normalize whitespace
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
 
-    // If description is too short, expand it with better formatting
     List<String> paragraphs = [];
 
-    // Try to split by common delimiters
     if (cleanText.contains('. ')) {
-      // Split by sentences and group into paragraphs
       List<String> sentences = cleanText.split(RegExp(r'\.\s+'));
       String currentParagraph = '';
 
@@ -456,27 +866,23 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         String sentence = sentences[i].trim();
         if (sentence.isEmpty) continue;
 
-        // Add period back if not last sentence
         if (i < sentences.length - 1 && !sentence.endsWith('.')) {
           sentence += '.';
         }
 
         currentParagraph += sentence + ' ';
 
-        // Create new paragraph every 2-3 sentences
         if ((i + 1) % 2 == 0 || i == sentences.length - 1) {
           paragraphs.add(currentParagraph.trim());
           currentParagraph = '';
         }
       }
     } else if (cleanText.contains('\n')) {
-      // Split by line breaks
       paragraphs = cleanText
           .split('\n')
           .where((p) => p.trim().isNotEmpty)
           .toList();
     } else {
-      // If no natural breaks, split by character count
       const int charsPerParagraph = 300;
       if (cleanText.length > charsPerParagraph) {
         int start = 0;
@@ -487,7 +893,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             break;
           }
 
-          // Find nearest sentence end
           int sentenceEnd = cleanText.indexOf('. ', end);
           if (sentenceEnd != -1 && sentenceEnd < end + 100) {
             end = sentenceEnd + 1;
@@ -501,16 +906,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       }
     }
 
-    // Ensure we have at least some content
     if (paragraphs.isEmpty && cleanText.isNotEmpty) {
       paragraphs.add(cleanText);
     }
 
-    // Add a continuation hint if content seems truncated
     bool seemsTruncated = cleanText.length > 100 &&
-                          !cleanText.endsWith('.') &&
-                          !cleanText.endsWith('!') &&
-                          !cleanText.endsWith('?');
+        !cleanText.endsWith('.') &&
+        !cleanText.endsWith('!') &&
+        !cleanText.endsWith('?');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,7 +934,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           );
         }).toList(),
 
-        // Add "Read more" hint if content seems truncated
         if (seemsTruncated)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -569,4 +971,3 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     }
   }
 }
-
