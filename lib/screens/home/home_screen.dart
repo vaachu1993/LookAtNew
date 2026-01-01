@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lookat_app/screens/explore/explore_screen.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../Components/BottomNavigationBarComponent.dart';
 import '../../models/article_model.dart';
@@ -677,7 +678,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildHeader() {
     // Format current date
     final now = DateTime.now();
-    final days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'];
+    final days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'];
     final months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
                     'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
     final dayName = days[now.weekday - 1];
@@ -800,13 +801,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildFeaturedNewsItem(ArticleModel article) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final updatedArticle = await Navigator.push<ArticleModel>(
           context,
           MaterialPageRoute(
             builder: (context) => ArticleDetailScreen(article: article),
           ),
         );
+
+        // Update article state if bookmark changed
+        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+          setState(() {
+            final index = _articles.indexWhere((a) => a.id == updatedArticle.id);
+            if (index != -1) {
+              _articles[index] = updatedArticle;
+            }
+            final allIndex = _allArticles.indexWhere((a) => a.id == updatedArticle.id);
+            if (allIndex != -1) {
+              _allArticles[allIndex] = updatedArticle;
+            }
+
+            // Update favorite IDs map
+            if (updatedArticle.isBookmarked) {
+              // Article is now bookmarked, we should have the favoriteId
+              // This will be managed by the detail screen
+            } else {
+              // Article is no longer bookmarked
+              _favoriteIds.remove(updatedArticle.id);
+            }
+          });
+        }
       },
       child: SizedBox(
         width: 230,
@@ -1005,7 +1029,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 GestureDetector(
                   onTap: () {
-                    // Handle view all tap
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ExploreScreen(),
+                      ),
+                    );
                   },
                   child: const Text(
                     'Xem tất cả',
@@ -1075,13 +1104,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildRecentStoryItem(ArticleModel article) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final updatedArticle = await Navigator.push<ArticleModel>(
           context,
           MaterialPageRoute(
             builder: (context) => ArticleDetailScreen(article: article),
           ),
         );
+
+        // Update article state if bookmark changed
+        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+          setState(() {
+            final index = _articles.indexWhere((a) => a.id == updatedArticle.id);
+            if (index != -1) {
+              _articles[index] = updatedArticle;
+            }
+            final allIndex = _allArticles.indexWhere((a) => a.id == updatedArticle.id);
+            if (allIndex != -1) {
+              _allArticles[allIndex] = updatedArticle;
+            }
+
+            // Update favorite IDs map
+            if (updatedArticle.isBookmarked) {
+              // Article is now bookmarked
+            } else {
+              // Article is no longer bookmarked
+              _favoriteIds.remove(updatedArticle.id);
+            }
+          });
+        }
       },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

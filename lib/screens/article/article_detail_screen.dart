@@ -208,65 +208,73 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (!didPop) {
+          Navigator.of(context).pop(_article);
+        }
+      },
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _article.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-              color: _article.isBookmarked ? const Color(0xFFE20035) : Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context, _article),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                _article.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                color: _article.isBookmarked ? const Color(0xFFE20035) : Colors.black,
+              ),
+              onPressed: _toggleBookmark,
             ),
-            onPressed: _toggleBookmark,
-          ),
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.black),
-            onPressed: _shareArticle,
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero Image
-            _buildHeroImage(),
-
-            // Content - BỎ PADDING Ở ĐÂY
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title, Source - VẪN CÓ PADDING
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTitle(),
-                      const SizedBox(height: 20),
-                      _buildSourceSection(),
-                      const SizedBox(height: 24),
-                      Divider(
-                        color: Colors.grey[300],
-                        thickness: 1,
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-
-                // Body Content - KHÔNG PADDING để ảnh full width
-                _buildBodyContent(),
-                const SizedBox(height: 40),
-              ],
+            IconButton(
+              icon: const Icon(Icons.share_outlined, color: Colors.black),
+              onPressed: _shareArticle,
             ),
           ],
+        ),
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hero Image
+              _buildHeroImage(),
+
+              // Content - BỎ PADDING Ở ĐÂY
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title, Source - VẪN CÓ PADDING
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTitle(),
+                        const SizedBox(height: 20),
+                        _buildSourceSection(),
+                        const SizedBox(height: 24),
+                        Divider(
+                          color: Colors.grey[300],
+                          thickness: 1,
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+
+                  // Body Content - KHÔNG PADDING để ảnh full width
+                  _buildBodyContent(),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
