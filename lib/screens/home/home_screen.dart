@@ -809,8 +809,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
 
-        // Update article state if bookmark changed
-        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+        // Update article state if changed
+        if (updatedArticle != null) {
           setState(() {
             final index = _articles.indexWhere((a) => a.id == updatedArticle.id);
             if (index != -1) {
@@ -1112,8 +1112,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
 
-        // Update article state if bookmark changed
-        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+        // Update article state if changed
+        if (updatedArticle != null) {
           setState(() {
             final index = _articles.indexWhere((a) => a.id == updatedArticle.id);
             if (index != -1) {
