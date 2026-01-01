@@ -405,7 +405,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
             children: [
               Text(
                 _currentCategory == 'all'
-                    ? 'All Articles'
+                    ? 'Tất cả bài báo'
                     : _getCategoryLabel(_currentCategory),
                 style: const TextStyle(
                   fontSize: 18,
@@ -414,7 +414,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
                 ),
               ),
               Text(
-                '${_filteredArticles.length} articles',
+                '${_filteredArticles.length} bài báo',
                 style: const TextStyle(
                   fontSize: 14,
                   color: Color(0xFF8E8E93),
@@ -570,17 +570,20 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
           ),
         );
 
-        // Update article state if bookmark changed
-        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+        // Update article state if it changed (not just bookmark)
+        if (updatedArticle != null) {
           setState(() {
+            // Update in filtered list
             final index = _filteredArticles.indexWhere((a) => a.id == updatedArticle.id);
             if (index != -1) {
               _filteredArticles[index] = updatedArticle;
             }
+            // Update in all articles list
             final allIndex = _allArticles.indexWhere((a) => a.id == updatedArticle.id);
             if (allIndex != -1) {
               _allArticles[allIndex] = updatedArticle;
             }
+            // Update in search results
             final searchIndex = _searchResults.indexWhere((a) => a.id == updatedArticle.id);
             if (searchIndex != -1) {
               _searchResults[searchIndex] = updatedArticle;
@@ -772,8 +775,8 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
           ),
         );
 
-        // Update article state if bookmark changed
-        if (updatedArticle != null && updatedArticle.isBookmarked != article.isBookmarked) {
+        // Update article state if it changed
+        if (updatedArticle != null) {
           setState(() {
             final index = _filteredArticles.indexWhere((a) => a.id == updatedArticle.id);
             if (index != -1) {

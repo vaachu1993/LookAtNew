@@ -33,6 +33,23 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     super.initState();
     _article = widget.article;
     _fetchArticleContent();
+    _checkBookmarkStatus();
+  }
+
+  /// Check current bookmark status from server
+  Future<void> _checkBookmarkStatus() async {
+    final favoritesResponse = await _favoriteService.getFavorites();
+    if (favoritesResponse.isSuccess && favoritesResponse.favorites != null) {
+      final isBookmarked = favoritesResponse.favorites!
+          .any((f) => f.articleId == _article.id);
+
+      // Update article if bookmark status differs
+      if (isBookmarked != _article.isBookmarked) {
+        setState(() {
+          _article = _article.copyWith(isBookmarked: isBookmarked);
+        });
+      }
+    }
   }
 
   Future<void> _fetchArticleContent() async {
