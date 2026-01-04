@@ -16,13 +16,34 @@ class FavoriteModel {
   });
 
   factory FavoriteModel.fromJson(Map<String, dynamic> json) {
+    // Try multiple possible keys for the article object
+    Map<String, dynamic>? articleJson;
+
+    // Check for 'article' key (lowercase)
+    if (json['article'] != null && json['article'] is Map<String, dynamic>) {
+      articleJson = json['article'] as Map<String, dynamic>;
+    } else if (json['title'] != null) {
+      // Backend trả về flat structure - construct articleJson từ root fields
+      articleJson = {
+        'id': json['articleId'],
+        'title': json['title'],
+        'description': json['description'],
+        'thumbnail': json['imageUrl'],
+        'link': json['link'],
+        'category': json['category'] ?? '', // Backend cần thêm field này
+        'source': json['source'],
+        'pubDate': json['pubDate'],
+        'createdAt': json['savedAt'] ?? json['createdAt'],
+      };
+    }
+
     return FavoriteModel(
       id: json['id'] as String? ?? '',
       articleId: json['articleId'] as String? ?? '',
       userId: json['userId'] as String? ?? '',
       createdAt: _parseDate(json['createdAt']),
-      article: json['article'] != null
-          ? ArticleModel.fromJson(json['article'] as Map<String, dynamic>)
+      article: articleJson != null
+          ? ArticleModel.fromJson(articleJson)
           : null,
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 import '../../Components/CustomTextField.dart';
 import '../../Components/GoogleSignInButton.dart';
+import '../../Components/VerifyEmailDialog.dart';
 import 'sign_up_screen.dart';
 import 'forgot_password_screen.dart';
 import '../../services/auth_service.dart';
@@ -419,7 +420,6 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
             const SizedBox(height: 16),
 
-            // Verify Email Link
             Center(
               child: GestureDetector(
                 onTap: _showVerifyEmailDialog,
@@ -445,75 +445,18 @@ class _EmailSignInScreenState extends State<EmailSignInScreen> {
 
   // Show dialog to enter email for verification
   void _showVerifyEmailDialog() {
-    final emailController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          'Xác nhận tài khoản',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Nhập email của tài khoản chưa được xác nhận:',
-              style: TextStyle(fontSize: 14, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'Email',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                prefixIcon: const Icon(Icons.email_outlined),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              emailController.dispose();
-              Navigator.of(context).pop();
-            },
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final email = emailController.text.trim();
-              if (email.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Vui lòng nhập email'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-                return;
-              }
-
-              emailController.dispose();
-              Navigator.of(context).pop();
-              _navigateToVerifyScreen(email);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE20035),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Tiếp tục', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      builder: (dialogContext) => VerifyEmailDialog(
+        onVerify: (email) {
+          Navigator.of(dialogContext).pop();
+          Future.delayed(const Duration(milliseconds: 200), () {
+            _navigateToVerifyScreen(email);
+          });
+        },
+        onCancel: () {
+          Navigator.of(dialogContext).pop();
+        },
       ),
     );
   }

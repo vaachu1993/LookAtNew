@@ -255,7 +255,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
               // Title
               const Text(
-                'OTP Verification',
+                'Xác thực OTP',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -266,7 +266,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
               // Subtitle
               const Text(
-                'Lorem ipsum dolor sit amet, consectetur\nadipiscing elit, sed do eiusmod tempor.',
+                'Vui lòng không tiết lộ mã OTP ra bên ngoài để đảm bảo an toàn.',
                 style: TextStyle(
                   fontSize: 14,
                   color: Color(0xFF9E9E9E),
@@ -296,9 +296,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                       color: Color(0xFF9E9E9E),
                     ),
                     children: [
-                      const TextSpan(text: 'You can resend the code in '),
+                      const TextSpan(text: 'Bạn có thể yêu cầu gửi lại mã trong '),
                       TextSpan(
-                        text: '$_resendCountdown seconds',
+                        text: '$_resendCountdown giây',
                         style: const TextStyle(
                           color: Color(0xFFE91E63),
                           fontWeight: FontWeight.w500,
@@ -324,7 +324,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     ),
                   ),
                   child: Text(
-                    'Resend Code',
+                    'Gửi lại mã.',
                     style: TextStyle(
                       fontSize: 16,
                       color: (_isResending || _resendCountdown > 0)

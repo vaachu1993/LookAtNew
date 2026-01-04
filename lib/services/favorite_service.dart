@@ -48,7 +48,7 @@ class FavoriteService {
         return FavoriteResponse.error('Authentication failed. Please login again.');
       } else {
         return FavoriteResponse.error(
-          'Failed to load favorites. Status: ${response.statusCode}'
+            'Failed to load favorites. Status: ${response.statusCode}'
         );
       }
     } catch (e) {
@@ -99,7 +99,7 @@ class FavoriteService {
         return AddFavoriteResponse.error(message);
       } else {
         return AddFavoriteResponse.error(
-          'Failed to add favorite. Status: ${response.statusCode}'
+            'Failed to add favorite. Status: ${response.statusCode}'
         );
       }
     } catch (e) {
@@ -140,7 +140,7 @@ class FavoriteService {
         return RemoveFavoriteResponse.error('Favorite not found');
       } else {
         return RemoveFavoriteResponse.error(
-          'Failed to remove favorite. Status: ${response.statusCode}'
+            'Failed to remove favorite. Status: ${response.statusCode}'
         );
       }
     } catch (e) {
@@ -226,4 +226,3 @@ class RemoveFavoriteResponse {
     );
   }
 }
-
