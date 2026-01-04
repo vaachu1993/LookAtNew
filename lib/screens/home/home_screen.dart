@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<ArticleModel> _allArticles = []; // Tất cả articles
   List<ArticleModel> _articles = []; // Filtered articles theo category
   bool _isLoading = true;
+  bool _isRefreshing = false; // Track background RSS fetch
   String? _errorMessage;
 
   // Track favorites by articleId -> favoriteId mapping
@@ -43,7 +44,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Load articles trước, categories sẽ được extract từ articles
     // Điều này đảm bảo category names khớp với data thực tế
-    _loadArticles(fetchRss: true);
+    // OPTIMIZATION: Load cached articles first (fast), then refresh with RSS fetch (background)
+    _loadArticlesWithOptimization();
+  }
+
+  /// Optimized loading: Show cached articles immediately, then fetch RSS in background
+  Future<void> _loadArticlesWithOptimization() async {
+    // Step 1: Load cached articles first (no RSS fetch) - FAST
+    await _loadArticles(fetchRss: false, silent: false);
+
+    // Step 2: Fetch RSS and refresh in background - SLOW but happens after UI shows
+    if (mounted) {
+      setState(() {
+        _isRefreshing = true;
+      });
+
+      await _loadArticles(fetchRss: true, silent: true);
+
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -181,25 +204,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _updateCategoriesFromArticles();
 
         // Show success message nếu RSS fetch thành công
-        if (!silent && mounted && response.rssFetchSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.refresh, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Đã cập nhật ${response.articlesCount} bài viết mới',
-                      style: const TextStyle(fontSize: 13),
+        if (mounted && response.rssFetchSuccess) {
+          if (!silent) {
+            // Explicit refresh by user - show full message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.refresh, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Đã cập nhật ${response.articlesCount} bài viết mới',
+                        style: const TextStyle(fontSize: 13),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                duration: const Duration(seconds: 2),
+                backgroundColor: Colors.green.shade700,
               ),
-              duration: const Duration(seconds: 2),
-              backgroundColor: Colors.green.shade700,
-            ),
-          );
+            );
+          } else if (response.articlesCount > 0) {
+            // Background refresh with new articles - show subtle message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.fiber_new, color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${response.articlesCount} bài viết mới',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                duration: const Duration(seconds: 1),
+                backgroundColor: Colors.green.shade700.withValues(alpha: 0.9),
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.only(bottom: 80, left: 20, right: 20),
+              ),
+            );
+          }
         }
       } else {
         setState(() {
@@ -330,8 +376,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         category: 'loading',
       ),
     );
-
-    double height = MediaQuery.of(context).size.height;
 
     return SafeArea(
       bottom: false,
@@ -522,7 +566,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => _loadArticles(fetchRss: true),
+              onPressed: () => _loadArticlesWithOptimization(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE20035),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -690,16 +734,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          const Text(
-            'Tin tức hôm nay',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              height: 1.1,
-              letterSpacing: -0.5,
-            ),
+          Row(
+            children: [
+              const Text(
+                'Tin tức hôm nay',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  height: 1.1,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              if (_isRefreshing) ...[
+                const SizedBox(width: 12),
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE20035)),
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 8),
 

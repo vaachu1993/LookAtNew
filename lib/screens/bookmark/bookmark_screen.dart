@@ -3,6 +3,8 @@ import '../../Components/BottomNavigationBarComponent.dart';
 import '../../models/favorite_model.dart';
 import '../../models/article_model.dart';
 import '../../services/favorite_service.dart';
+import '../../services/article_service.dart';
+import '../../services/category_service.dart';
 import '../../Utils/Utils.dart';
 import '../article/article_detail_screen.dart';
 
@@ -17,10 +19,17 @@ class _BookmarkScreenState extends State<BookmarkScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final FavoriteService _favoriteService = FavoriteService();
+  final ArticleService _articleService = ArticleService();
+  final CategoryService _categoryService = CategoryService();
 
   List<FavoriteModel> _favorites = [];
+  List<FavoriteModel> _filteredFavorites = [];
   bool _isLoading = true;
   String? _errorMessage;
+
+  // Categories
+  List<String> _categories = [];
+  String _currentCategory = 'all';
 
   @override
   void initState() {
@@ -46,10 +55,20 @@ class _BookmarkScreenState extends State<BookmarkScreen>
 
     if (mounted) {
       if (response.isSuccess) {
+        // Sort by createdAt (newest first)
+        final sortedFavorites = List<FavoriteModel>.from(response.favorites ?? []);
+        sortedFavorites.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        // Enrich favorites with category from database
+        await _enrichFavoritesWithCategory(sortedFavorites);
+
         setState(() {
-          _favorites = response.favorites ?? [];
+          _favorites = sortedFavorites;
+          _filteredFavorites = _favorites;
           _isLoading = false;
         });
+        // Extract categories from favorites
+        _updateCategoriesFromFavorites();
       } else {
         setState(() {
           _errorMessage = response.error ?? 'Failed to load favorites';
@@ -59,24 +78,109 @@ class _BookmarkScreenState extends State<BookmarkScreen>
     }
   }
 
+  /// Enrich favorites with category data from database
+  Future<void> _enrichFavoritesWithCategory(List<FavoriteModel> favorites) async {
+    for (int i = 0; i < favorites.length; i++) {
+      final favorite = favorites[i];
+      if (favorite.article != null && favorite.article!.id.isNotEmpty) {
+        try {
+          final response = await _articleService.getArticleById(favorite.article!.id);
+          if (response.isSuccess && response.article != null && response.article!.category.isNotEmpty) {
+            // Create new ArticleModel with category from database
+            final enrichedArticle = ArticleModel(
+              id: favorite.article!.id,
+              title: favorite.article!.title,
+              description: favorite.article!.description,
+              thumbnail: favorite.article!.thumbnail,
+              link: favorite.article!.link,
+              source: favorite.article!.source,
+              category: response.article!.category, // ✅ Get category from database
+              pubDate: favorite.article!.pubDate,
+              createdAt: favorite.article!.createdAt,
+            );
+
+            // Create new FavoriteModel with enriched article
+            favorites[i] = FavoriteModel(
+              id: favorite.id,
+              articleId: favorite.articleId,
+              userId: favorite.userId,
+              createdAt: favorite.createdAt,
+              article: enrichedArticle,
+            );
+          }
+        } catch (e) {
+          // Silently fail for individual articles
+          debugPrint('Failed to enrich article ${favorite.article!.id}: $e');
+        }
+      }
+    }
+  }
+
+  /// Extract categories from favorites
+  void _updateCategoriesFromFavorites() {
+    if (_favorites.isNotEmpty) {
+      final articlesWithData = _favorites.where((f) => f.article != null).toList();
+      final articles = articlesWithData.map((f) => f.article!).toList();
+      final extractedCategories = _categoryService.extractCategoriesFromArticles(articles);
+
+      if (extractedCategories.isNotEmpty) {
+        setState(() {
+          _categories = extractedCategories;
+        });
+      }
+    }
+  }
+
+  /// Handle category selection
+  void _onCategorySelected(String category) {
+    if (_currentCategory == category) return;
+
+    setState(() {
+      _currentCategory = category;
+    });
+
+    _filterFavoritesByCategory();
+  }
+
+  /// Filter favorites by category
+  void _filterFavoritesByCategory() {
+    setState(() {
+      if (_currentCategory == 'all') {
+        _filteredFavorites = List.from(_favorites);
+      } else {
+        _filteredFavorites = _favorites.where((favorite) {
+          if (favorite.article == null) return false;
+          return favorite.article!.category.toLowerCase() == _currentCategory.toLowerCase();
+        }).toList();
+      }
+    });
+  }
+
+  /// Get category label
+  String _getCategoryLabel(String category) {
+    if (category == 'all') return 'Tất cả';
+    // Capitalize first letter
+    return category[0].toUpperCase() + category.substring(1);
+  }
+
   Future<void> _removeFavorite(FavoriteModel favorite) async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Bookmark'),
-        content: const Text('Are you sure you want to remove this article from your bookmarks?'),
+        title: const Text('Xóa dấu trang'),
+        content: const Text('Bạn có chắc chắn muốn xóa bài viết này khỏi mục đánh dấu lưu trữ của mình không?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Hủy bỏ'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFFE20035),
             ),
-            child: const Text('Remove'),
+            child: const Text('Xóa'),
           ),
         ],
       ),
@@ -86,7 +190,10 @@ class _BookmarkScreenState extends State<BookmarkScreen>
       // Optimistic UI update
       setState(() {
         _favorites.removeWhere((f) => f.id == favorite.id);
+        _filteredFavorites.removeWhere((f) => f.id == favorite.id);
       });
+      // Update categories
+      _updateCategoriesFromFavorites();
 
       final response = await _favoriteService.removeFavorite(favorite.id);
 
@@ -95,15 +202,11 @@ class _BookmarkScreenState extends State<BookmarkScreen>
         setState(() {
           _favorites.add(favorite);
         });
+        _updateCategoriesFromFavorites();
+        _filterFavoritesByCategory();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(response.error ?? 'Failed to remove favorite')),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bookmark removed')),
           );
         }
       }
@@ -122,7 +225,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Bookmarks',
+          'Lưu trữ',
           style: TextStyle(
             color: Colors.black,
             fontSize: 18,
@@ -139,15 +242,15 @@ class _BookmarkScreenState extends State<BookmarkScreen>
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFFE20035),
-              ),
-            )
+        child: CircularProgressIndicator(
+          color: Color(0xFFE20035),
+        ),
+      )
           : _errorMessage != null
-              ? _buildErrorState()
-              : _favorites.isEmpty
-                  ? _buildEmptyState()
-                  : _buildBookmarksList(),
+          ? _buildErrorState()
+          : _favorites.isEmpty
+          ? _buildEmptyState()
+          : _buildBookmarksContent(),
       bottomNavigationBar: const BottomNavigationBarComponent(),
     );
   }
@@ -209,7 +312,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
             ),
             const SizedBox(height: 16),
             const Text(
-              'No Bookmarks Yet',
+              'Chưa có dấu trang nào',
               style: TextStyle(
                 color: Colors.black87,
                 fontSize: 20,
@@ -218,7 +321,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Save articles you like by tapping the heart icon',
+              'Lưu lại những bài viết bạn thích bằng cách nhấn vào biểu tượng trái tim.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey[600],
@@ -231,15 +334,133 @@ class _BookmarkScreenState extends State<BookmarkScreen>
     );
   }
 
+  Widget _buildBookmarksContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Category buttons
+        if (_categories.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              'Danh mục',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildCategoryButtons(),
+          const SizedBox(height: 8),
+        ],
+
+        // Article count
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Text(
+            '${_filteredFavorites.length} bài đã lưu',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF8E8E93),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+
+        // Bookmarks list
+        Expanded(
+          child: _buildBookmarksList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryButtons() {
+    // Thêm "Tất cả" vào đầu danh sách
+    final allCategories = ['all', ..._categories];
+
+    return SizedBox(
+      height: 42,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: allCategories.length,
+        itemBuilder: (context, index) {
+          final category = allCategories[index];
+          final isSelected = _currentCategory == category;
+
+          return Padding(
+            padding: EdgeInsets.only(right: index < allCategories.length - 1 ? 12 : 0),
+            child: _buildCategoryButton(
+              label: _getCategoryLabel(category),
+              isSelected: isSelected,
+              onTap: () => _onCategorySelected(category),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCategoryButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE20035) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFE20035) : const Color(0xFFE0E0E0),
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.black87,
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBookmarksList() {
     return RefreshIndicator(
       onRefresh: _loadFavorites,
       color: const Color(0xFFE20035),
-      child: ListView.builder(
+      child: _filteredFavorites.isEmpty
+          ? Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            _currentCategory == 'all'
+                ? 'Chưa có bookmark nào'
+                : 'Không có bài báo ${_getCategoryLabel(_currentCategory)}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+          ),
+        ),
+      )
+          : ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _favorites.length,
+        itemCount: _filteredFavorites.length,
         itemBuilder: (context, index) {
-          final favorite = _favorites[index];
+          final favorite = _filteredFavorites[index];
           return _buildBookmarkItem(favorite);
         },
       ),
@@ -264,7 +485,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
           children: [
             const Expanded(
               child: Text(
-                'Article information not available',
+                'Thông tin bài viết không có sẵn',
                 style: TextStyle(
                   color: Colors.grey,
                   fontSize: 14,
@@ -304,13 +525,23 @@ class _BookmarkScreenState extends State<BookmarkScreen>
 
   Widget _buildArticleCard(ArticleModel article, FavoriteModel favorite) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final updatedArticle = await Navigator.push<ArticleModel>(
           context,
           MaterialPageRoute(
             builder: (context) => ArticleDetailScreen(article: article),
           ),
         );
+
+        // If article was unbookmarked, remove it from local list smoothly
+        if (updatedArticle != null && !updatedArticle.isBookmarked) {
+          setState(() {
+            _favorites.removeWhere((f) => f.id == favorite.id);
+            _filteredFavorites.removeWhere((f) => f.id == favorite.id);
+            // Update categories after removal
+            _updateCategoriesFromFavorites();
+          });
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
